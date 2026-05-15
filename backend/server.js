@@ -381,7 +381,7 @@ app.get('/api/data/approval', checkAuth, (req, res) => {
         reqs = reqs.filter(r => r.status === 'PENDING');
     }
 
-    if (u.role !== 'administrator' && u.selectedDivision) {
+    if (u.role !== 'administrator') {
         reqs = reqs.filter(r => r.divisi === u.selectedDivision);
     }
 
@@ -439,7 +439,7 @@ app.post('/api/frp/save', checkAuth, (req, res) => {
         const sequences = requests.filter(r => r.frpNo && r.frpNo.startsWith(prefix)).map(r => parseInt(r.frpNo.split('-').pop(), 10) || 0);
         const nextSeq = Math.max(0, ...sequences) + 1;
         const frpNo = `${prefix}${nextSeq.toString().padStart(5, '0')}`;
-        const newReq = { id: Date.now().toString(36), ...req.body, frpNo, requestBy: req.body.dimintaOleh || 'System', status: 'PENDING', createdBy: req.session.user.fullName, createdAt: new Date().toISOString() };
+        const newReq = { ...req.body, id: Date.now().toString(36), frpNo, requestBy: req.body.dimintaOleh || 'System', status: 'PENDING', createdBy: req.session.user.fullName, createdAt: new Date().toISOString() };
         requests.push(newReq);
         writeJson('requests.json', requests);
         res.json({ success: true, id: newReq.id, frpNo });
@@ -451,10 +451,10 @@ app.post('/api/frp/:id/:action', checkAuth, (req, res) => {
     const idx = requests.findIndex(r => r.id === req.params.id);
     if (idx === -1) return res.json({ success: false });
     const action = req.params.action;
-    if (action === 'approve') { requests[idx].status = 'APPROVED'; requests[idx].approvedBy = req.session.user.fullName; requests[idx].approvedAt = new Date().toISOString(); }
+    if (action === 'approve') { requests[idx].status = 'APPROVED'; requests[idx].approvedByActual = req.session.user.fullName; const employees = readJson('employees.json'); const divisi = requests[idx].divisi || ''; const mgr = employees.find(e => (e.companies || []).some(a => a.class === divisi && ['Manager', 'Direktur', 'Komisaris'].includes(a.jobLevel))); requests[idx].approvedBy = mgr ? mgr.fullName : req.session.user.fullName; requests[idx].approvedAt = new Date().toISOString(); }
     else if (action === 'reject') requests[idx].status = 'REJECTED';
     else if (action === 'delete') requests.splice(idx, 1);
-    else if (action === 'revert') { requests[idx].status = 'PENDING'; delete requests[idx].approvedBy; delete requests[idx].approvedAt; }
+    else if (action === 'revert') { requests[idx].status = 'PENDING'; delete requests[idx].approvedByActual; delete requests[idx].approvedAt; }
     else if (action === 'update') { requests[idx] = { ...requests[idx], ...req.body, id: requests[idx].id, status: requests[idx].status, frpNo: requests[idx].frpNo }; }
     writeJson('requests.json', requests);
     res.json({ success: true });

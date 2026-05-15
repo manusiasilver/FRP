@@ -11,18 +11,18 @@ function getItemKey(item) {
 
 function isItemActive(item, pathname) {
   if (item.href === '/') return pathname === '/'
-  if (item.href && item.href.startsWith('/admin')) return pathname.startsWith('/admin')
   if (item.href) return pathname === item.href
   return item.children?.some(c => isItemActive(c, pathname)) ?? false
 }
 
-function SidebarNavItem({ item, pathname, collapsed, expandedGroups, onToggleGroup, onSelect }) {
+function SidebarNavItem({ item, pathname, collapsed, expandedGroups, onToggleGroup, onSelect, isChild = false }) {
   const hasChildren = item.children?.length > 0
   const active = isItemActive(item, pathname)
   const expanded = hasChildren ? (expandedGroups[getItemKey(item)] ?? false) : false
 
   const className = [
     'nav-item',
+    isChild ? 'nav-item--child' : '',
     active ? 'active' : '',
     hasChildren ? 'nav-item--accordion' : '',
     expanded ? 'nav-item--expanded' : '',
@@ -32,7 +32,10 @@ function SidebarNavItem({ item, pathname, collapsed, expandedGroups, onToggleGro
 
   const content = (
     <>
-      <span className="material-icons-round nav-icon" style={{ fontSize: '22px' }}>{item.icon}</span>
+      {isChild
+        ? <span className="nav-item__bullet" />
+        : <span className="material-icons-round nav-icon" style={{ fontSize: '22px' }}>{item.icon}</span>
+      }
       <span className="nav-text">{item.label}</span>
       {hasChildren && <span className="material-icons-round nav-item__chevron" style={{ fontSize: '18px', marginLeft: 'auto' }}>chevron_right</span>}
     </>
@@ -58,7 +61,7 @@ function SidebarNavItem({ item, pathname, collapsed, expandedGroups, onToggleGro
       {hasChildren && !collapsed && (
         <div className={`nav-submenu${expanded ? ' expanded' : ''}`}>
           {item.children.map(child => (
-            <SidebarNavItem key={getItemKey(child)} item={child} pathname={pathname} collapsed={collapsed} expandedGroups={expandedGroups} onToggleGroup={onToggleGroup} onSelect={onSelect} />
+            <SidebarNavItem key={getItemKey(child)} item={child} pathname={pathname} collapsed={collapsed} expandedGroups={expandedGroups} onToggleGroup={onToggleGroup} onSelect={onSelect} isChild />
           ))}
         </div>
       )}
@@ -79,8 +82,15 @@ export default function Sidebar({ collapsed = false, userName = 'User', userRole
     { label: 'New Request', href: '/', icon: 'add_circle' },
     { label: 'Approval', href: '/approval', icon: 'pending_actions' },
     { label: 'Approved', href: '/approved', icon: 'check_circle' },
-    { label: 'History', href: '/history', icon: 'history' },
-    ...(userIsAdmin ? [{ label: 'Master Data', href: '/admin/employees', icon: 'admin_panel_settings' }] : []),
+    ...(userIsAdmin ? [{
+      label: 'Master Data', icon: 'admin_panel_settings', children: [
+        { label: 'Karyawan', href: '/admin/employees', icon: 'people' },
+        { label: 'Vendor', href: '/admin/vendors', icon: 'store' },
+        { label: 'Departemen', href: '/admin/departments', icon: 'account_tree' },
+        { label: 'Anggaran', href: '/admin/budgets', icon: 'savings' },
+        { label: 'Roles', href: '/admin/roles', icon: 'manage_accounts' },
+      ]
+    }] : []),
   ]
 
   const secondaryItems = [

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
-import BackgroundMain from '../components/BackgroundMain'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 
@@ -286,17 +285,15 @@ export default function AdminPage() {
   const typeName = type.charAt(0).toUpperCase() + type.slice(1)
   const user = data?.user || {}
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#64748b' }}>Memuat data...</div>
-
   return (
     <>
-      <BackgroundMain />
       <div className={`dashboard-shell${sidebarCollapsed ? ' dashboard-shell--sidebar-collapsed' : ''}`}>
         <Sidebar collapsed={sidebarCollapsed} userName={user.fullName || 'Admin'} userRole={user.selectedJobLevel || user.role || 'Administrator'} userIsAdmin={user.role === 'administrator'} allAssignments={user.allAssignments || []} onToggleCollapse={() => setSidebarCollapsed(c => !c)} />
         <div className="dashboard-stage">
           <Header title="Form Request Payment" />
           <main className="dashboard-main">
-            <div style={S.card}>
+            {loading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#64748b' }}>Memuat data...</div>}
+            {!loading && <div style={S.card}>
               <div style={S.addCard}>
                 <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e293b', fontSize: '1rem' }}>
                   <span className="material-icons-round">add_circle</span> Tambah Data Baru
@@ -330,7 +327,7 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div>}
           </main>
         </div>
       </div>

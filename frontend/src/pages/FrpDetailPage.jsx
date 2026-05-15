@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
+import CreateButton from '../components/button/CreateButton'
 
 const DOCS = ['Form Request Payment', 'Tanda Terima Asli', 'Invoice / Kontrak', 'Surat Jalan Asli / Berita Acara', 'Faktur Pajak', 'Purchase Order']
 
@@ -33,10 +34,56 @@ function buildPostForm(action, payload, target = '_self') {
   document.body.removeChild(form)
 }
 
+function openPrintPreview(payload) {
+  const target = `print-preview-${Date.now()}`
+  const printWindow = window.open('', target)
+
+  if (!printWindow) {
+    buildPostForm('/preview', payload, '_blank')
+    return
+  }
+
+  let printed = false
+  const triggerPrint = () => {
+    if (printed) {
+      return
+    }
+
+    try {
+      printed = true
+      printWindow.focus()
+      printWindow.print()
+    } catch {
+      printed = false
+    }
+  }
+
+  const poll = window.setInterval(() => {
+    if (printWindow.closed) {
+      window.clearInterval(poll)
+      return
+    }
+
+    try {
+      const readyState = printWindow.document?.readyState
+      if (readyState === 'complete') {
+        window.clearInterval(poll)
+        window.setTimeout(triggerPrint, 250)
+      }
+    } catch {
+      // Tunggu hingga dokumen preview selesai termuat dan bisa diakses.
+    }
+  }, 200)
+
+  buildPostForm('/preview', payload, target)
+}
+
 export default function FrpDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
   const [payload, setPayload] = useState(null)
   const [loading, setLoading] = useState(true)
+  const isApprovalEmbedded = new URLSearchParams(location.search).get('embedded') === 'approval'
 
   useEffect(() => {
     fetch(`/api/frp/${id}`)
@@ -71,6 +118,7 @@ export default function FrpDetailPage() {
   const labelStyle = { display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '4px' }
   const grid2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }
   const grid3 = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }
+  const actionBarStyle = { position: 'fixed', bottom: 0, left: 0, width: '100%', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', padding: '0.75rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '8px', boxShadow: '0 -4px 15px rgba(0,0,0,0.05)', zIndex: 1000, flexWrap: 'wrap', boxSizing: 'border-box' }
 
   return (
     <div style={{ background: 'transparent', minHeight: '100vh', paddingBottom: '80px', padding: '1rem' }}>
@@ -161,22 +209,52 @@ export default function FrpDetailPage() {
         </div>
       </div>
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', padding: '0.75rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '8px', boxShadow: '0 -4px 15px rgba(0,0,0,0.05)', zIndex: 1000, flexWrap: 'wrap', boxSizing: 'border-box' }}>
+      <div style={actionBarStyle}>
         {data.status === 'APPROVED' && <>
-          <button onClick={() => buildPostForm('/preview', data, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: 'white', color: '#475569', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>visibility</span> Preview</button>
-          <button onClick={() => buildPostForm('/generate-pdf', data, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>download</span> Download</button>
-          {(canApprove || isIT) && <button onClick={() => doAction('reject')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>cancel</span> Reject</button>}
+          <CreateButton variant="accordion" tone="primary" onClick={() => openPrintPreview(data)}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>print</span>
+            Print
+          </CreateButton>
+          <CreateButton variant="accordion" tone="neutral" onClick={() => buildPostForm('/generate-pdf', data, '_blank')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>download</span>
+            Download
+          </CreateButton>
+          {!isApprovalEmbedded && (canApprove || isIT) && <CreateButton variant="accordion" tone="warning" onClick={() => doAction('reject')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>cancel</span>
+            Reject
+          </CreateButton>}
         </>}
         {data.status === 'PENDING' && <>
-          {(canApprove || isIT || data.createdBy === user?.fullName) && <button onClick={() => doAction('delete')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span> Hapus</button>}
-          {(canApprove || isIT || data.createdBy === user?.fullName) && <button onClick={revisiForm} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#1f4e8c', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>edit</span> Revisi</button>}
-          {(canApprove || isIT) && <button onClick={() => doAction('reject')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>cancel</span> Reject</button>}
-          {(canApprove || isIT) && <button onClick={() => doAction('approve')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>check_circle</span> Approve</button>}
+          {(canApprove || isIT || data.createdBy === user?.fullName) && <CreateButton variant="accordion" tone="danger" onClick={() => doAction('delete')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span>
+            Hapus
+          </CreateButton>}
+          {(canApprove || isIT || data.createdBy === user?.fullName) && <CreateButton variant="accordion" tone="primary" onClick={revisiForm}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>edit</span>
+            Revisi
+          </CreateButton>}
+          {!isApprovalEmbedded && (canApprove || isIT) && <CreateButton variant="accordion" tone="warning" onClick={() => doAction('reject')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>cancel</span>
+            Reject
+          </CreateButton>}
+          {!isApprovalEmbedded && (canApprove || isIT) && <CreateButton variant="accordion" onClick={() => doAction('approve')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>check_circle</span>
+            Approve
+          </CreateButton>}
         </>}
         {data.status === 'REJECTED' && <>
-          {(canApprove || isIT || data.createdBy === user?.fullName) && <button onClick={() => doAction('delete')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span> Hapus</button>}
-          {(canApprove || isIT || data.createdBy === user?.fullName) && <button onClick={revisiForm} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#1f4e8c', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>edit</span> Revisi</button>}
-          {(canApprove || isIT) && <button onClick={() => doAction('approve')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}><span className="material-icons-round" style={{ fontSize: '16px' }}>check_circle</span> Approve</button>}
+          {(canApprove || isIT || data.createdBy === user?.fullName) && <CreateButton variant="accordion" tone="danger" onClick={() => doAction('delete')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span>
+            Hapus
+          </CreateButton>}
+          {(canApprove || isIT || data.createdBy === user?.fullName) && <CreateButton variant="accordion" tone="primary" onClick={revisiForm}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>edit</span>
+            Revisi
+          </CreateButton>}
+          {!isApprovalEmbedded && (canApprove || isIT) && <CreateButton variant="accordion" onClick={() => doAction('approve')}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>check_circle</span>
+            Approve
+          </CreateButton>}
         </>}
       </div>
     </div>

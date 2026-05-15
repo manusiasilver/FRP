@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const path = require\\('path'\\); const __dirname = 'C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\IT\\\\\\\\\\\\\\\\Documents\\\\\\\\\\\\\\\\FRP\\\\\\\\\\\\\\\\backend'; console.log\\(path.join\\(__dirname, '..', 'frontend', 'dist', 'index.html'\\)\\)\")",
+      "Bash(node -e \"const path = require\\('path'\\); const d = 'C:\\\\\\\\Users\\\\\\\\IT\\\\\\\\Documents\\\\\\\\FRP\\\\\\\\backend'; console.log\\(path.join\\(d, '..', 'frontend', 'dist', 'index.html'\\)\\)\")",
+      "Bash(Test-Path \"C:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\frontend\\\\dist\\\\index.html\")",
+      "PowerShell(Stop-Process -Id 9512 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Id 25028 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process -FilePath \"node\" -ArgumentList \"server.js\" -WorkingDirectory \"C:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\backend\" -WindowStyle Normal)",
+      "PowerShell(Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd \"C:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\backend\"; node server.js' -WindowStyle Normal)",
+      "Bash(findstr \":3000\")",
+      "Bash(node -e ' *)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3000/api/data/approval?view=pending)",
+      "Bash(findstr \":3000.*LISTENING\")"
+    ]
+  }
+}

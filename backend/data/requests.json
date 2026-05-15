@@ -35,11 +35,9 @@
     "checkDocs": [
       "Form Request Payment"
     ],
-    "status": "APPROVED",
+    "status": "PENDING",
     "createdBy": "Bayu Noegroho",
-    "createdAt": "2026-05-12T10:08:45.240Z",
-    "approvedByActual": "Bayu Noegroho",
-    "approvedAt": "2026-05-12T10:08:54.743Z"
+    "createdAt": "2026-05-12T10:08:45.240Z"
   },
   {
     "id": "mp2gza82",
@@ -80,8 +78,9 @@
     "status": "APPROVED",
     "createdBy": "Bayu Noegroho",
     "createdAt": "2026-05-12T10:10:20.930Z",
-    "approvedByActual": "Bayu Noegroho",
-    "approvedAt": "2026-05-12T10:10:30.841Z"
+    "approvedByActual": "Apriyanto",
+    "approvedBy": "Mulyasi Rahardja",
+    "approvedAt": "2026-05-15T14:06:30.366Z"
   },
   {
     "id": "mp3ewnpj",
@@ -305,7 +304,8 @@
     "createdBy": "Egy Irsandi",
     "createdAt": "2026-05-15T03:15:15.380Z",
     "approvedBy": "Chandra",
-    "approvedAt": "2026-05-15T03:22:28.755Z"
+    "approvedByActual": "Chandra",
+    "approvedAt": "2026-05-15T13:00:56.732Z"
   },
   {
     "id": "mp6d78e3",
@@ -479,5 +479,153 @@
     "createdAt": "2026-05-15T05:40:19.261Z",
     "approvedBy": "Ivon Yuanita Miharja",
     "approvedAt": "2026-05-15T05:47:08.465Z"
+  },
+  {
+    "id": "mp6wkjy9vp0t",
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-15",
+    "divisi": "Finance",
+    "dimintaOleh": "Yosefhin Tesalonika",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "EVERGREEN SHIPPING AGENCY INDONESIA, PT",
+    "internalPoNumber": "",
+    "extDocType": "invoice",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-15",
+    "attachLink": "",
+    "keteranganFrp": "testing",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "indihome",
+        "budgetId": "FIN2604",
+        "qty": "1",
+        "hargaSatuan": "10000000",
+        "amount": 10000000
+      }
+    ],
+    "bankTujuan": "BCA",
+    "rekBankTujuan": "35332223",
+    "frpNo": "FRP-FIN-26-00002",
+    "requestBy": "Yosefhin Tesalonika",
+    "status": "APPROVED",
+    "createdBy": "Apriyanto",
+    "createdAt": "2026-05-15T12:11:28.348Z",
+    "approvedBy": "Mulyasi Rahardja",
+    "approvedByActual": "Apriyanto",
+    "approvedAt": "2026-05-15T14:06:31.556Z"
+  },
+  {
+    "id": "mp6wkjy9rksv",
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-15",
+    "divisi": "HCGA",
+    "dimintaOleh": "Cahyaningtyas Merry Nugraheni",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "EVERGREEN SHIPPING AGENCY INDONESIA, PT",
+    "internalPoNumber": "",
+    "extDocType": "",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-15",
+    "attachLink": "",
+    "keteranganFrp": "tesing ",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "indihome",
+        "budgetId": "",
+        "qty": "1",
+        "hargaSatuan": "100000000",
+        "amount": 100000000
+      }
+    ],
+    "bankTujuan": "BCA",
+    "rekBankTujuan": "35332223",
+    "frpNo": "FRP-HCG-26-00001",
+    "requestBy": "Cahyaningtyas Merry Nugraheni",
+    "status": "PENDING",
+    "createdBy": "Apriyanto",
+    "createdAt": "2026-05-15T12:18:25.201Z"
+  },
+  {
+    "id": "mp6wkjy93uqv",
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-15",
+    "divisi": "Gosave B2B",
+    "dimintaOleh": "Egy Irsandi",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "KAS NEGARA",
+    "internalPoNumber": "",
+    "extDocType": "invoice",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-15",
+    "attachLink": "",
+    "keteranganFrp": "teting",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "indihome",
+        "budgetId": "GSB2602",
+        "qty": "1",
+        "hargaSatuan": "100000",
+        "amount": 100000
+      }
+    ],
+    "bankTujuan": "BCA",
+    "rekBankTujuan": "35332223",
+    "frpNo": "FRP-GOS-26-00002",
+    "requestBy": "Egy Irsandi",
+    "status": "REJECTED",
+    "createdBy": "Apriyanto",
+    "createdAt": "2026-05-15T12:35:39.729Z",
+    "approvedBy": "Chandra"
+  },
+  {
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-15",
+    "divisi": "Gosave GT",
+    "dimintaOleh": "Egy Irsandi",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "COSCO SHIPPING LINES INDONESIA, PT",
+    "internalPoNumber": "",
+    "extDocType": "invoice",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-15",
+    "attachLink": "",
+    "keteranganFrp": "testing",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "indihome",
+        "budgetId": "",
+        "qty": "1",
+        "hargaSatuan": "1000000",
+        "amount": 1000000
+      }
+    ],
+    "id": "mp6xft3i",
+    "bankTujuan": "BCA",
+    "rekBankTujuan": "35332223",
+    "frpNo": "FRP-GOS-26-00003",
+    "requestBy": "Egy Irsandi",
+    "status": "PENDING",
+    "createdBy": "Egy Irsandi",
+    "createdAt": "2026-05-15T13:02:10.451Z"
   }
 ]

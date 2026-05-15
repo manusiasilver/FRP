@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 const S = {
-  body: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#f8fafc', backgroundImage: 'radial-gradient(circle at 2px 2px, #e2e8f0 1px, transparent 0)', backgroundSize: '40px 40px' },
+  body: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' },
   card: { background: 'white', padding: '3rem', borderRadius: '2rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', width: '100%', maxWidth: '450px', textAlign: 'center', border: '1px solid #e2e8f0', boxSizing: 'border-box' },
   iconBox: { width: '80px', height: '80px', background: 'linear-gradient(135deg, #4f46e5, #0ea5e9)', borderRadius: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', margin: '0 auto 2rem', boxShadow: '0 10px 25px rgba(79,70,229,0.3)' },
   h1: { fontSize: '1.875rem', fontWeight: 800, color: '#1e293b', margin: '0 0 0.5rem' },

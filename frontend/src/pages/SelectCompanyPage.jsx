@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import BackgroundMain from '../components/BackgroundMain'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 
@@ -34,7 +33,6 @@ export default function SelectCompanyPage() {
 
   return (
     <>
-      <BackgroundMain />
       <div className={`dashboard-shell${sidebarCollapsed ? ' dashboard-shell--sidebar-collapsed' : ''}`}>
         <Sidebar collapsed={sidebarCollapsed} userName={user.fullName} userRole={user.selectedJobLevel || user.role} userIsAdmin={user.role === 'administrator'} allAssignments={user.allAssignments || []} onToggleCollapse={() => setSidebarCollapsed(c => !c)} />
         <div className="dashboard-stage">

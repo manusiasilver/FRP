@@ -1,16 +1,18 @@
 import { Routes, Route } from 'react-router-dom'
+import BackgroundMain from './components/BackgroundMain'
 import LoginPage from './pages/LoginPage'
 import SelectCompanyPage from './pages/SelectCompanyPage'
 import SelectDivisionPage from './pages/SelectDivisionPage'
 import FormPage from './pages/FormPage'
 import ApprovalPage from './pages/ApprovalPage'
 import AdminPage from './pages/AdminPage'
-import HistoryPage from './pages/HistoryPage'
 import FrpDetailPage from './pages/FrpDetailPage'
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <BackgroundMain />
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/select-company" element={<SelectCompanyPage />} />
       <Route path="/select-division" element={<SelectDivisionPage />} />
@@ -18,8 +20,8 @@ export default function App() {
       <Route path="/approval" element={<ApprovalPage />} />
       <Route path="/approved" element={<ApprovalPage />} />
       <Route path="/admin/:type" element={<AdminPage />} />
-      <Route path="/history" element={<HistoryPage />} />
       <Route path="/frp/:id" element={<FrpDetailPage />} />
     </Routes>
+    </>
   )
 }
