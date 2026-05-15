@@ -354,13 +354,81 @@ function Sidebar({
 
 // Header
 
-function Header({ title = 'Form Request Payment', subtitle = 'FRP System' }) {
+const HEADER_LOGO = '/templateComponents/assets/logo-piagam.png'
+const HEADER_ACCENT_LOGO = '/templateComponents/assets/logo-piagam2.png'
+
+function Header({
+  title = 'Pilar Group',
+  subtitle = 'FRP System',
+  breadcrumb,
+  showMenuButton = false,
+  onMenuToggle,
+}) {
+  const breadcrumbItems = Array.isArray(breadcrumb) && breadcrumb.length > 0
+    ? breadcrumb
+    : [
+        { label: 'Workspace', href: '#' },
+        { label: title, href: '#', active: true },
+      ]
+
   return (
     <header className="header-main">
+      <img
+        src={HEADER_ACCENT_LOGO}
+        alt=""
+        aria-hidden="true"
+        className="header-accent-logo"
+      />
+
       <div className="header-content">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-          <span className="header-brand-title">{title}</span>
-          {subtitle && <p className="page-subtitle">{subtitle}</p>}
+        <div className="header-left">
+          {showMenuButton ? (
+            <button
+              type="button"
+              className="header-menu-button"
+              aria-label="Open sidebar"
+              onClick={onMenuToggle}
+            >
+              <span className="material-icons-round" style={{ fontSize: '20px' }}>menu</span>
+            </button>
+          ) : null}
+
+          <div className="header-brand">
+            <img src={HEADER_LOGO} alt="Logo Piagam" className="header-brand-logo" />
+          </div>
+        </div>
+
+        <div className="header-right">
+          <div className="header-title-block">
+            <span className="header-brand-title">{title}</span>
+            {subtitle ? <p className="page-subtitle">{subtitle}</p> : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="header-breadcrumb">
+        <div className="header-breadcrumb-content">
+          <nav className="breadcrumb-nav" aria-label="Breadcrumb">
+            {breadcrumbItems.map((item, index) => (
+              <div className="breadcrumb-item" key={`${item.label}-${index}`}>
+                <a
+                  href={item.href ?? '#'}
+                  className={`breadcrumb-link${item.active ? ' active' : ''}`}
+                  onClick={(event) => {
+                    if (!item.href || item.href === '#') {
+                      event.preventDefault()
+                    }
+                  }}
+                >
+                  {item.label}
+                </a>
+
+                {index < breadcrumbItems.length - 1 ? (
+                  <span className="breadcrumb-separator">/</span>
+                ) : null}
+              </div>
+            ))}
+          </nav>
         </div>
       </div>
     </header>
