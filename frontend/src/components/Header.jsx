@@ -7,6 +7,8 @@ const ROUTE_TITLES = {
   '/': 'New Request',
   '/approval': 'Approval',
   '/approved': 'Approved',
+  '/dashboard': 'Dashboard',
+  '/laporan': 'Laporan',
   '/history': 'History',
   '/select-company': 'Pilih Perusahaan',
   '/select-division': 'Pilih Divisi',

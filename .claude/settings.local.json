@@ -15,7 +15,17 @@
       "Bash(findstr \":3000.*LISTENING\")",
       "PowerShell(Get-ChildItem \"c:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\backend\" | Where-Object { $_.Name -ne \"node_modules\" } | Select-Object Name, LastWriteTime)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\backend\" | Where-Object { $_.Name -ne \"node_modules\" })",
-      "Bash(del \"C:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\frontend\\\\src\\\\pages\\\\HistoryPage.jsx\")"
+      "Bash(del \"C:\\\\Users\\\\IT\\\\Documents\\\\FRP\\\\frontend\\\\src\\\\pages\\\\HistoryPage.jsx\")",
+      "Bash(cd /c/Users/IT/Documents/FRP/backend && cat package.json 2>/dev/null | head -30)",
+      "Read(//c/c/Users/IT/Documents/FRP/backend/**)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); r=d[-1] if d else {}; print\\(json.dumps\\({'keteranganFrp': r.get\\('keteranganFrp',''\\), 'items': r.get\\('items',[]\\)[:2]}, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(node -e \"const fs = require\\('fs'\\); const r = JSON.parse\\(fs.readFileSync\\('c:/Users/IT/Documents/FRP/backend/data/requests.json'\\)\\); console.log\\('total:', r.length\\); console.log\\('sample keys:', Object.keys\\(r[0] || {}\\)\\); console.log\\('statuses:', [...new Set\\(r.map\\(x=>x.status\\)\\)]\\); const companies = [...new Set\\(r.map\\(x=>x.companyName\\)\\)]; console.log\\('companies:', companies\\);\")",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill -9)",
+      "Bash(curl -s http://localhost:3000/login)",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)"
     ]
   }
 }

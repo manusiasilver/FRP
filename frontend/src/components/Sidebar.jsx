@@ -32,9 +32,9 @@ function SidebarNavItem({ item, pathname, collapsed, expandedGroups, onToggleGro
 
   const content = (
     <>
-      {isChild
-        ? <span className="nav-item__bullet" />
-        : <span className="material-icons-round nav-icon" style={{ fontSize: '22px' }}>{item.icon}</span>
+      {item.icon
+        ? <span className="material-icons-round nav-icon" style={{ fontSize: isChild ? '18px' : '22px', opacity: isChild ? 0.75 : 1 }}>{item.icon}</span>
+        : <span className="nav-item__bullet" />
       }
       <span className="nav-text">{item.label}</span>
       {hasChildren && <span className="material-icons-round nav-item__chevron" style={{ fontSize: '18px', marginLeft: 'auto' }}>chevron_right</span>}
@@ -79,9 +79,11 @@ export default function Sidebar({ collapsed = false, mobileOpen = false, userNam
   const backUrl = uniqueCompanies.length > 1 ? '/select-company' : '/select-division'
 
   const primaryItems = [
+    ...(userIsAdmin ? [{ label: 'Dashboard', href: '/dashboard', icon: 'dashboard' }] : []),
     { label: 'New Request', href: '/', icon: 'add_circle' },
     { label: 'Approval', href: '/approval', icon: 'pending_actions' },
     { label: 'Approved', href: '/approved', icon: 'check_circle' },
+    ...((userIsAdmin || (allAssignments || []).some(a => a.class === 'IT')) ? [{ label: 'Laporan', href: '/laporan', icon: 'summarize' }] : []),
     ...(userIsAdmin ? [{
       label: 'Master Data', icon: 'admin_panel_settings', children: [
         { label: 'Karyawan', href: '/admin/employees', icon: 'people' },

@@ -370,7 +370,21 @@ export default function ApprovalPage() {
   const copyFrpNo = async (requestId, frpNo) => {
     if (!frpNo) return
     try {
-      await navigator.clipboard.writeText(frpNo)
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(frpNo)
+      } else {
+        const tempInput = document.createElement('textarea')
+        tempInput.value = frpNo
+        tempInput.setAttribute('readonly', '')
+        tempInput.style.position = 'fixed'
+        tempInput.style.opacity = '0'
+        tempInput.style.pointerEvents = 'none'
+        document.body.appendChild(tempInput)
+        tempInput.focus()
+        tempInput.select()
+        document.execCommand('copy')
+        document.body.removeChild(tempInput)
+      }
       setCopiedFrpId(requestId)
       window.setTimeout(() => {
         setCopiedFrpId(current => (current === requestId ? null : current))
@@ -403,12 +417,14 @@ export default function ApprovalPage() {
   const detailValueBox = {
     padding: '10px 12px',
     borderRadius: '10px',
-    border: '1.5px solid #dbe5f0',
+    border: '1.5px solid #d7e0ea',
     background: '#f8fafc',
     color: '#334155',
     lineHeight: 1.5,
     minHeight: '42px',
     boxSizing: 'border-box',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
+    transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
   }
   const requesters = useMemo(
     () => (data?.requests ? [...new Set(data.requests.map((request) => request.dimintaOleh).filter(Boolean))].sort() : []),
@@ -432,8 +448,8 @@ export default function ApprovalPage() {
   const filterGridStyle = useMemo(
     () => ({
       display: 'grid',
-      gridTemplateColumns: getGridColumns(5, isMobile, isTablet),
-      gap: isMobile ? '12px' : '15px',
+      gridTemplateColumns: isMobile ? '1fr 1fr' : getGridColumns(5, false, isTablet),
+      gap: isMobile ? '10px' : '15px',
       alignItems: 'flex-end',
     }),
     [isMobile, isTablet],
@@ -507,8 +523,8 @@ export default function ApprovalPage() {
               style={{
                 background: '#f1f5f9',
                 borderRadius: '16px',
-                padding: '20px',
-                marginBottom: '20px',
+                padding: isMobile ? '12px' : '20px',
+                marginBottom: isMobile ? '12px' : '20px',
                 border: '1px solid #e2e8f0',
               }}
             >
@@ -575,7 +591,7 @@ export default function ApprovalPage() {
                   },
                 ].map(({ label, content }, i) =>
                   label || content ? (
-                    <div key={i}>
+                    <div key={i} style={{ gridColumn: isMobile && i === 0 ? '1 / -1' : undefined }}>
                       {label && (
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#475569', marginBottom: '6px', letterSpacing: '0.04em' }}>
                           {label}
@@ -583,7 +599,7 @@ export default function ApprovalPage() {
                       )}
                       {content}
                     </div>
-                  ) : <div key={i} />,
+                  ) : null,
                 )}
               </div>
             </div>
@@ -598,7 +614,7 @@ export default function ApprovalPage() {
                 borderRadius: '16px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                 border: '1px solid #e2e8f0',
-                overflow: 'clip',
+                overflow: 'hidden',
               }}
             >
               {filtered.length === 0 ? (
@@ -661,7 +677,7 @@ export default function ApprovalPage() {
                             </>
                           )}
                           {data?.canApprove && isApprovedView && (
-                            <button type="button" onClick={() => doAction(request.id, 'revert')} style={{ background: '#fef9c3', color: '#92400e', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', fontFamily: 'inherit' }}>Revert</button>
+                            <button type="button" onClick={() => doAction(request.id, 'revert')} style={{ flex: 1, background: '#fef9c3', color: '#92400e', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', fontFamily: 'inherit' }}>Revert</button>
                           )}
                           <button type="button" onClick={() => setSelectedRequest(request)} style={{ flex: 1, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit' }}>Detail</button>
                         </div>
@@ -669,7 +685,7 @@ export default function ApprovalPage() {
                     )
                   })}
                   </div>
-                  <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+                  <div style={{ flexShrink: 0, borderTop: '1px solid #e2e8f0', padding: '12px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
                     <div style={{ fontSize: '12px', color: '#64748b' }}>{rangeStart}-{rangeEnd} dari {filtered.length}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>Rows</span>
@@ -683,7 +699,7 @@ export default function ApprovalPage() {
                 </>
               ) : (
                 <>
-                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   <table style={{ width: '100%', maxWidth: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.875rem', tableLayout: 'fixed' }}>
                     <colgroup>
                       {desktopColumnWidths.map((width, index) => <col key={`desktop-head-col-${index}`} style={{ width }} />)}
@@ -713,7 +729,7 @@ export default function ApprovalPage() {
                       </tr>
                     </thead>
                   </table>
-                  <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
                     <table style={{ width: '100%', maxWidth: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.875rem', tableLayout: 'fixed' }}>
                       <colgroup>
                         {desktopColumnWidths.map((width, index) => <col key={`desktop-body-col-${index}`} style={{ width }} />)}
@@ -844,7 +860,7 @@ export default function ApprovalPage() {
                     </table>
                   </div>
                 </div>
-                <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 14px', display: 'flex', flexWrap: 'nowrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+                <div style={{ flexShrink: 0, borderTop: '1px solid #e2e8f0', padding: '12px 14px', display: 'flex', flexWrap: 'nowrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>{rangeStart}-{rangeEnd} dari {filtered.length} data</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>

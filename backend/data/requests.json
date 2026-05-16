@@ -78,9 +78,9 @@
     "status": "APPROVED",
     "createdBy": "Bayu Noegroho",
     "createdAt": "2026-05-12T10:10:20.930Z",
-    "approvedByActual": "Apriyanto",
     "approvedBy": "Mulyasi Rahardja",
-    "approvedAt": "2026-05-15T14:06:30.366Z"
+    "approvedByActual": "Apriyanto",
+    "approvedAt": "2026-05-16T10:59:51.622Z"
   },
   {
     "id": "mp3ewnpj",
@@ -116,11 +116,9 @@
     "checkDocs": [
       "Form Request Payment"
     ],
-    "status": "APPROVED",
+    "status": "PENDING",
     "createdBy": "Bayu Noegroho",
     "createdAt": "2026-05-13T02:00:05.383Z",
-    "approvedByActual": "Bayu Noegroho",
-    "approvedAt": "2026-05-13T02:01:22.631Z",
     "attachLink": "",
     "requestBy": "Khuzaima Desri",
     "approvedBy": "Johan Setyo"

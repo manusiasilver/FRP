@@ -1,4 +1,4 @@
-import '../../styles/templateStyle/TemplateComponents.css'
+import '../../styles/templateComponents.css'
 
 function CardBigBox({
   as: Component = 'section',
