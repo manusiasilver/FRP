@@ -211,8 +211,12 @@ function SearchableSelect({
 
     const updateMenuRect = () => {
       const rect = triggerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const renderUpward = spaceBelow < 320
+
       setMenuRect({
-        top: rect.bottom + 6,
+        top: renderUpward ? null : rect.bottom + 6,
+        bottom: renderUpward ? window.innerHeight - rect.top + 6 : null,
         left: rect.left,
         width: rect.width,
       })
@@ -231,7 +235,7 @@ function SearchableSelect({
   const menuBaseStyle = menuPosition === 'fixed'
     ? {
         position: 'fixed',
-        top: menuRect?.top || 0,
+        ...(menuRect?.top !== null ? { top: menuRect?.top || 0 } : { bottom: menuRect?.bottom || 0 }),
         left: menuRect?.left || 0,
         width: menuRect?.width || 0,
       }

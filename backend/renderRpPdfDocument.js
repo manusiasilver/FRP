@@ -100,7 +100,7 @@ function renderRpPdfDocument(formData = {}, preview = false) {
     .title-container { text-align: right; }
     .title { font-size: 16px; font-weight: 700; color: #000; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: 0.5px; }
     .doc-no { font-size: 11px; font-weight: 600; color: #000; margin: 0; }
-    .company-name { font-size: 10px; font-weight: 700; color: #000; margin: 0 0 2px 0; text-transform: uppercase; }
+    .company-name { font-size: 13px; font-weight: 700; color: #000; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .info-box { border: 1px solid #000; border-radius: 6px; padding: 8px 12px; }

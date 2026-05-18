@@ -8,21 +8,75 @@ const normalizeNumber = v => { const n = Number(String(v).replace(/[^0-9.-]/g, '
 const formatCurrency = v => new Intl.NumberFormat('id-ID').format(normalizeNumber(v))
 const formatNumberInput = v => { if (!v && v !== 0) return ''; const c = String(v).replace(/\D/g, ''); return c ? new Intl.NumberFormat('en-US').format(parseInt(c, 10)) : '' }
 
-function SearchableSelect({ name, value, onChange, options, placeholder = 'Pilih...', style, disabled = false }) {
-  const [open, setOpen] = useState(false), [search, setSearch] = useState(''), ref = useRef(null)
+function SearchableSelect({ name, value, onChange, options, placeholder = 'Pilih...', style, disabled = false, menuPosition = 'absolute' }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+  const triggerRef = useRef(null)
+  const [menuRect, setMenuRect] = useState(null)
+
   const opts = options.map(o => typeof o === 'string' ? { value: o, label: o, keywords: o } : { value: o.value, label: o.label, keywords: o.keywords || o.label })
   const selected = opts.find(o => o.value === value)
   const filtered = opts.filter(o => String(o.keywords || '').toLowerCase().includes(search.toLowerCase()))
+
   useEffect(() => { if (!open) setSearch('') }, [open])
-  useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h) }, [])
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  useEffect(() => {
+    if (!open || menuPosition !== 'fixed' || !triggerRef.current) return undefined
+
+    const updateMenuRect = () => {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const renderUpward = spaceBelow < 320
+
+      setMenuRect({
+        top: renderUpward ? null : rect.bottom + 4,
+        bottom: renderUpward ? window.innerHeight - rect.top + 4 : null,
+        left: rect.left,
+        width: rect.width,
+      })
+    }
+
+    updateMenuRect()
+    window.addEventListener('resize', updateMenuRect)
+    window.addEventListener('scroll', updateMenuRect, true)
+
+    return () => {
+      window.removeEventListener('resize', updateMenuRect)
+      window.removeEventListener('scroll', updateMenuRect, true)
+    }
+  }, [open, menuPosition])
+
+  const menuStyle = menuPosition === 'fixed' && menuRect
+    ? {
+        position: 'fixed',
+        ...(menuRect.top !== null ? { top: menuRect.top } : { bottom: menuRect.bottom }),
+        left: menuRect.left,
+        width: menuRect.width,
+        zIndex: 9999,
+      }
+    : {
+        position: 'absolute',
+        top: '100%',
+        left: 0,
+        right: 0,
+        zIndex: 50,
+      }
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" disabled={disabled} onClick={() => !disabled && setOpen(!open)} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left', cursor: disabled ? 'default' : 'pointer' }}>
+      <button ref={triggerRef} type="button" disabled={disabled} onClick={() => !disabled && setOpen(!open)} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left', cursor: disabled ? 'default' : 'pointer' }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selected ? '#1e293b' : '#94a3b8' }}>{selected ? selected.label : placeholder}</span>
         <span className="material-icons-round" style={{ fontSize: '18px', color: '#94a3b8' }}>expand_more</span>
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'white', borderRadius: '10px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', marginTop: '4px', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...menuStyle, background: 'white', borderRadius: '10px', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0', marginTop: '4px', maxHeight: '300px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '8px' }}><input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari..." style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #d7e0ea', fontSize: '0.875rem', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }} /></div>
           <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
             <button type="button" onClick={() => { onChange(''); setOpen(false) }} style={{ width: '100%', border: 'none', background: 'white', textAlign: 'left', padding: '10px 12px', fontFamily: 'inherit', fontSize: '0.875rem', color: '#94a3b8', cursor: 'pointer' }}>{placeholder}</button>
@@ -142,6 +196,16 @@ export default function RpFormPage() {
       setSubmitError('Kolom Class wajib diisi.')
       return
     }
+
+    // Confirmation dialog before submit
+    const isProcess = !!searchParams.get('process')
+    const confirmMsg = isProcess
+      ? 'Apakah Anda yakin ingin mengupdate dan mengirimkan data Request Purchase ini?'
+      : 'Apakah Anda yakin ingin mengirimkan Request Purchase ini?'
+    if (!window.confirm(confirmMsg)) {
+      return
+    }
+
     setSubmitting(true); setSubmitError(null)
     try {
       const processId = searchParams.get('process')
@@ -251,7 +315,7 @@ export default function RpFormPage() {
                         return (
                           <tr key={idx}>
                             <td style={S.td}><span style={{ fontWeight: 600, color: '#64748b' }}>{idx + 1}</span></td>
-                            <td style={S.td}><SearchableSelect name={`items[${idx}][budgetId]`} value={item.budgetId} onChange={v => updateItem(idx, 'budgetId', v)} options={budgetSelectOpts} placeholder="Pilih Budget" style={S.tdSelect} /></td>
+                            <td style={S.td}><SearchableSelect name={`items[${idx}][budgetId]`} value={item.budgetId} onChange={v => updateItem(idx, 'budgetId', v)} options={budgetSelectOpts} placeholder="Pilih Budget" style={S.tdSelect} menuPosition="fixed" /></td>
                             <td style={S.td}><input name={`items[${idx}][memo]`} style={S.tdInput} value={item.memo} onChange={e => updateItem(idx, 'memo', e.target.value)} placeholder="Deskripsi item..." /></td>
                             <td style={S.td}><input name={`items[${idx}][linkPembelian]`} style={S.tdInput} value={item.linkPembelian} onChange={e => updateItem(idx, 'linkPembelian', e.target.value)} placeholder="https://..." /></td>
                             <td style={S.td}><input type="number" name={`items[${idx}][qty]`} style={S.tdInput} value={item.qty} onChange={e => updateItem(idx, 'qty', e.target.value)} /></td>

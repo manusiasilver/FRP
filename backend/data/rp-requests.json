@@ -88,7 +88,7 @@
   {
     "id": "rp-1779082055674-eatc4vzd5",
     "rpNo": "RP-GSG-26-00003",
-    "status": "PENDING_PROCESS_APPROVAL",
+    "status": "APPROVED",
     "companyName": "PT PILAR NIAGA MAKMUR",
     "divisi": "Gosave GT",
     "class": "Gosave GT",
@@ -114,7 +114,9 @@
     "managerApprovedAt": "2026-05-18T06:46:50.575Z",
     "processChanges": [],
     "processUpdatedBy": "Bayu Noegroho",
-    "processUpdatedAt": "2026-05-18T06:47:55.017Z"
+    "processUpdatedAt": "2026-05-18T06:47:55.017Z",
+    "processManagerApprovedBy": "Yulliemty",
+    "processManagerApprovedAt": "2026-05-18T07:04:45.542Z"
   },
   {
     "id": "rp-1779082968106-r85rzo0lm",
