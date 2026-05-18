@@ -124,7 +124,7 @@ export default function RpApprovalPage() {
               <button onClick={() => window.open(`/api/rp/${rp.id}/preview`, '_blank')} style={{ padding:'10px 20px', background:'#f8fafc', color:'#475569', border:'1px solid #cbd5e1', borderRadius:'10px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Preview</button>
               <button onClick={() => window.open(`/api/rp/${rp.id}/pdf`, '_blank')} style={{ padding:'10px 20px', background:'#f1f5f9', color:'#1e293b', border:'1px solid #cbd5e1', borderRadius:'10px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Print PDF</button>
               
-              {rp.status === 'APPROVED' && user.selectedDivision === 'Product' && (
+              {rp.status === 'APPROVED' && (isAdmin || user.selectedDivision === 'IT' || user.selectedDivision === 'Product') && (
                 <button onClick={() => navigate(`/frp?fromRp=${rp.id}`)} style={{ padding:'10px 20px', background:'#2563eb', color:'white', border:'none', borderRadius:'10px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Ke FRP</button>
               )}
               

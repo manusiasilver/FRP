@@ -762,5 +762,46 @@
     "approvedByActual": "Jeanever",
     "approvedBy": "Jeanever",
     "approvedAt": "2026-05-18T08:26:30.242Z"
+  },
+  {
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-18",
+    "divisi": "IT",
+    "dimintaOleh": "Bayu Noegroho",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "EVERGREEN SHIPPING AGENCY INDONESIA, PT",
+    "internalPoNumber": "123inv",
+    "extDocType": "invoice",
+    "extDocNumber": "inv123098765",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-18",
+    "attachLink": "",
+    "keteranganFrp": "laptop",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "barang 1",
+        "budgetId": "SIT2604",
+        "qty": "1",
+        "hargaSatuan": "100,000",
+        "amount": 100000
+      }
+    ],
+    "id": "mpb1bej5",
+    "rpReference": "RP-SIT-26-00001",
+    "fromRpId": "rp-1779097406015-jivyed8ul",
+    "bankTujuan": "BCA",
+    "rekBankTujuan": "1234567890",
+    "frpNo": "FRP-SIT-26-00002",
+    "requestBy": "Bayu Noegroho",
+    "status": "APPROVED",
+    "createdBy": "Bayu Noegroho",
+    "createdAt": "2026-05-18T10:01:48.113Z",
+    "approvedByActual": "Bayu Noegroho",
+    "approvedBy": "Yulliemty",
+    "approvedAt": "2026-05-18T10:02:02.217Z"
   }
 ]

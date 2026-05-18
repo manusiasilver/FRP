@@ -210,5 +210,38 @@
     "processUpdatedAt": "2026-05-18T06:49:45.817Z",
     "processManagerApprovedBy": "Muhamad Asep Hafidzul Umam",
     "processManagerApprovedAt": "2026-05-18T06:50:21.725Z"
+  },
+  {
+    "id": "rp-1779097406015-jivyed8ul",
+    "rpNo": "RP-SIT-26-00001",
+    "status": "CREATED_FRP",
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "divisi": "IT",
+    "class": "IT",
+    "dibuatOleh": "Bayu Noegroho",
+    "kategoriPembelian": "Pengadaan Barang Baru",
+    "deskripsi": "laptop",
+    "diprosesOleh": "IT",
+    "tanggalDibutuhkan": "2026-05-18",
+    "vendorSuggestion": "EVERGREEN SHIPPING AGENCY INDONESIA, PT",
+    "picPenerima": "product",
+    "items": [
+      {
+        "budgetId": "SIT2604",
+        "memo": "barang 1",
+        "linkPembelian": "google.com",
+        "qty": "1",
+        "estimatedValue": "100000"
+      }
+    ],
+    "createdAt": "2026-05-18T09:43:26.015Z",
+    "createdBy": "Bayu Noegroho",
+    "managerApprovedBy": "Bayu Noegroho",
+    "managerApprovedAt": "2026-05-18T09:43:31.971Z",
+    "processChanges": [],
+    "processUpdatedBy": "Bayu Noegroho",
+    "processUpdatedAt": "2026-05-18T09:43:38.428Z",
+    "processManagerApprovedBy": "Bayu Noegroho",
+    "processManagerApprovedAt": "2026-05-18T09:43:47.433Z"
   }
 ]
