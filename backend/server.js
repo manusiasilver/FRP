@@ -4,6 +4,8 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const session = require('express-session');
 const https = require('https');
+const bcrypt = require('bcryptjs');
+const db = require('./db');
 const { renderPdfDocument } = require('./renderPdfDocument');
 const renderRpPdfDocument = require('./renderRpPdfDocument');
 
@@ -32,6 +34,87 @@ app.use(session({
 
 const readJson = (file) => JSON.parse(fs.readFileSync(path.join(dataPath, file), 'utf8').replace(/^﻿/, ''));
 const writeJson = (file, data) => fs.writeFileSync(path.join(dataPath, file), JSON.stringify(data, null, 2));
+
+// --- DATABASE HELPERS ---
+const COMPANY_MAP = {
+    'PNM': 'PT PILAR NIAGA MAKMUR',
+    'PKS': 'PT PILAR KARANG SAMUDERA',
+    'PKP': 'PT PILAR KARGO PERKASA',
+};
+
+function mapJobLevel(name) {
+    if (!name) return 'Staff';
+    if (name === 'Commissioner') return 'Komisaris';
+    if (['President Director', 'Finance Director'].includes(name)) return 'Direktur';
+    if (['Senior Manager', 'Manager'].includes(name)) return 'Manager';
+    return name;
+}
+
+const USER_SQL = `
+    SELECT cu.id, cu.name, cu.email, cu.username, cu.department_id,
+           md.name AS dept_name, md.code AS dept_code, md.company AS company_code,
+           mjl.name AS job_level_name
+    FROM central_users cu
+    LEFT JOIN master_departments md ON cu.department_id = md.id
+    LEFT JOIN master_job_levels mjl ON cu.job_level_id = mjl.id
+    WHERE cu.is_active = 1
+`;
+
+const LOGIN_SQL = `
+    SELECT cu.id, cu.name, cu.email, cu.username, cu.password, cu.department_id,
+           md.name AS dept_name, md.code AS dept_code, md.company AS company_code,
+           mjl.name AS job_level_name
+    FROM central_users cu
+    LEFT JOIN master_departments md ON cu.department_id = md.id
+    LEFT JOIN master_job_levels mjl ON cu.job_level_id = mjl.id
+    WHERE cu.is_active = 1 AND cu.username = ?
+    LIMIT 1
+`;
+
+function dbRowToEmployee(row) {
+    const companyName = COMPANY_MAP[row.company_code] || row.company_code || 'PT PILAR NIAGA MAKMUR';
+    const deptName = row.dept_name || '';
+    const jobLevel = mapJobLevel(row.job_level_name);
+    return {
+        fullName: row.name,
+        email: row.email || '',
+        username: row.username,
+        role: row.department_id === 8 ? 'administrator' : 'user',
+        companies: [{ name: companyName, class: deptName, jobLevel }],
+        originalIndex: row.id,
+    };
+}
+
+async function getAllEmployees() {
+    const [rows] = await db.query(USER_SQL + ' ORDER BY cu.name');
+    return rows.map(dbRowToEmployee);
+}
+
+async function getDeptCode(deptName) {
+    const dept = (deptName || '').trim();
+    if (!dept) return 'GEN';
+    const [rows] = await db.query(
+        'SELECT code FROM master_departments WHERE UPPER(name) = UPPER(?) OR UPPER(class) = UPPER(?) LIMIT 1',
+        [dept, dept]
+    );
+    if (rows.length && rows[0].code) return rows[0].code;
+    return dept.substring(0, 3).toUpperCase();
+}
+
+async function getJobLevelId(jobLevelName) {
+    const mapped = { 'Komisaris': 'Commissioner', 'Direktur': 'President Director' };
+    const search = mapped[jobLevelName] || jobLevelName;
+    const [rows] = await db.query('SELECT id FROM master_job_levels WHERE name = ? LIMIT 1', [search]);
+    return rows.length ? rows[0].id : 8;
+}
+
+async function getDeptId(deptClass) {
+    const [rows] = await db.query(
+        'SELECT id FROM master_departments WHERE name = ? OR class = ? LIMIT 1',
+        [deptClass, deptClass]
+    );
+    return rows.length ? rows[0].id : null;
+}
 
 const renderAppShell = ({
     title = 'FRP System',
@@ -148,7 +231,7 @@ const checkAuth = (req, res, next) => {
                 }
                 return res.redirect('/select-company');
             }
-            
+
             const divisions = u.allAssignments
                 .filter(a => a.name === (u.selectedCompany || uniqueCompanies[0]))
                 .map(a => a.class);
@@ -178,27 +261,38 @@ app.get('/login', (req, res) => {
     sendSPA(res);
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    const employees = readJson('employees.json');
-    const user = employees.find(e => e.fullName === username);
-    if (user && password === '123') {
-        req.session.user = { fullName: user.fullName, role: user.role, allAssignments: user.companies || [] };
-        return res.redirect('/select-company');
-    }
+    try {
+        const [rows] = await db.query(LOGIN_SQL, [username]);
+        if (rows.length) {
+            const row = rows[0];
+            const match = await bcrypt.compare(password, row.password || '');
+            if (match) {
+                const emp = dbRowToEmployee(row);
+                req.session.user = { fullName: emp.fullName, role: emp.role, allAssignments: emp.companies };
+                return res.redirect('/select-company');
+            }
+        }
+    } catch (e) { console.error('[Login Error]', e.message); }
     res.redirect('/login?error=1');
 });
 
-// JSON login for React
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
-    const employees = readJson('employees.json');
-    const user = employees.find(e => e.fullName === username);
-    if (user && password === '123') {
-        req.session.user = { fullName: user.fullName, role: user.role, allAssignments: user.companies || [] };
-        return res.json({ success: true, redirect: '/select-company' });
-    }
-    res.json({ success: false, error: 'Nama atau Password salah' });
+    try {
+        const [rows] = await db.query(LOGIN_SQL, [username]);
+        if (rows.length) {
+            const row = rows[0];
+            const match = await bcrypt.compare(password, row.password || '');
+            if (match) {
+                const emp = dbRowToEmployee(row);
+                req.session.user = { fullName: emp.fullName, role: emp.role, allAssignments: emp.companies };
+                return res.json({ success: true, redirect: '/select-company' });
+            }
+        }
+    } catch (e) { console.error('[Login Error]', e.message); }
+    res.json({ success: false, error: 'Username atau Password salah' });
 });
 
 app.get('/select-company', checkAuth, (req, res) => {
@@ -298,62 +392,71 @@ app.get('/logout', (req, res) => {
 app.get('/', checkAuth, (req, res) => sendSPA(res));
 app.get('/frp', checkAuth, (req, res) => sendSPA(res));
 
-app.get('/api/form-data', checkAuth, (req, res) => {
-    const u = req.session.user;
-    const employeesData = readJson('employees.json');
-    const budgetsData = readJson('budgets.json');
-    const companiesData = readJson('companies.json');
-    const vendorsData = readJson('vendors.json');
-    const requests = readJson('requests.json');
+app.get('/api/form-data', checkAuth, async (req, res) => {
+    try {
+        const u = req.session.user;
+        const [employees, budgetsData, companiesData, vendorsData] = await Promise.all([
+            getAllEmployees(),
+            Promise.resolve(readJson('budgets.json')),
+            Promise.resolve(readJson('companies.json')),
+            Promise.resolve(readJson('vendors.json')),
+        ]);
+        const requests = readJson('requests.json');
 
-    const usedBudgets = {};
-    requests.forEach(r => {
-        if (r.status === 'APPROVED' && r.items) {
-            r.items.forEach(item => {
-                const bId = item.budgetId;
-                const amt = parseInt(String(item.amount || '0').replace(/[^0-9]/g, ''), 10) || 0;
-                usedBudgets[bId] = (usedBudgets[bId] || 0) + amt;
-            });
+        const usedBudgets = {};
+        requests.forEach(r => {
+            if (r.status === 'APPROVED' && r.items) {
+                r.items.forEach(item => {
+                    const bId = item.budgetId;
+                    const amt = parseInt(String(item.amount || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                    usedBudgets[bId] = (usedBudgets[bId] || 0) + amt;
+                });
+            }
+        });
+
+        const budgetsWithRemaining = budgetsData.map(b => ({
+            ...b,
+            remainingAmount: (b.totalAmount || 0) - (usedBudgets[b.id] || 0)
+        }));
+
+        let editData = null;
+        if (req.query.revisi) {
+            editData = requests.find(r => r.id === req.query.revisi);
         }
-    });
 
-    const budgetsWithRemaining = budgetsData.map(b => ({
-        ...b,
-        remainingAmount: (b.totalAmount || 0) - (usedBudgets[b.id] || 0)
-    }));
-
-    let editData = null;
-    if (req.query.revisi) {
-        editData = requests.find(r => r.id === req.query.revisi);
-    }
-
-    res.json({
-        employees: employeesData,
-        budgets: budgetsWithRemaining,
-        companies: companiesData,
-        vendors: vendorsData,
-        user: {
-            ...u,
+        res.json({
+            employees,
+            budgets: budgetsWithRemaining,
+            companies: companiesData,
+            vendors: vendorsData,
+            user: {
+                ...u,
+                selectedCompany: u.selectedCompany || '',
+                selectedDivision: u.selectedDivision || '',
+                selectedJobLevel: u.selectedJobLevel || ''
+            },
             selectedCompany: u.selectedCompany || '',
             selectedDivision: u.selectedDivision || '',
-            selectedJobLevel: u.selectedJobLevel || ''
-        },
-        selectedCompany: u.selectedCompany || '',
-        selectedDivision: u.selectedDivision || '',
-        selectedJobLevel: u.selectedJobLevel || '',
-        editData: editData
-    });
+            selectedJobLevel: u.selectedJobLevel || '',
+            editData: editData
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/employees/:department', checkAuth, (req, res) => {
-    const dept = req.params.department;
-    const company = req.query.company;
-    const employeesData = readJson('employees.json');
-    const filtered = employeesData.filter(e => {
-        if (!e.companies) return e.class === dept;
-        return e.companies.some(assign => (assign.class === dept && (!company || assign.name === company)));
-    });
-    res.json(filtered);
+app.get('/api/employees/:department', checkAuth, async (req, res) => {
+    try {
+        const dept = req.params.department;
+        const company = req.query.company;
+        const [rows] = await db.query(
+            USER_SQL + ' AND md.name = ? ORDER BY cu.name',
+            [dept]
+        );
+        let employees = rows.map(dbRowToEmployee);
+        if (company) {
+            employees = employees.filter(e => e.companies.some(c => c.name === company));
+        }
+        res.json(employees);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/budgets/:department', checkAuth, (req, res) => {
@@ -375,26 +478,33 @@ app.get('/api/budgets/:department', checkAuth, (req, res) => {
     res.json(filtered);
 });
 
-app.get('/api/departments', checkAuth, (req, res) => {
-    const depts = readJson('departments.json');
-    res.json([...new Set(depts.map(d => d.class).filter(Boolean))].sort());
+app.get('/api/departments', checkAuth, async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT DISTINCT name FROM master_departments ORDER BY name');
+        res.json(rows.map(r => r.name));
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/managers/:department', checkAuth, (req, res) => {
-    const dept = req.params.department;
-    const company = req.query.company;
-    const employeesData = readJson('employees.json');
-    const filtered = employeesData.filter(e => {
-        if (!e.companies) return false;
-        return e.companies.some(assign => (assign.class === dept && (!company || assign.name === company) && ['Manager', 'Direktur', 'Komisaris'].includes(assign.jobLevel)));
-    });
-    res.json(filtered);
+app.get('/api/managers/:department', checkAuth, async (req, res) => {
+    try {
+        const dept = req.params.department;
+        const company = req.query.company;
+        const [rows] = await db.query(
+            USER_SQL + ' AND md.name = ? AND mjl.level >= 4 ORDER BY cu.name',
+            [dept]
+        );
+        let managers = rows.map(dbRowToEmployee);
+        if (company) {
+            managers = managers.filter(e => e.companies.some(c => c.name === company));
+        }
+        res.json(managers);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 function getExchangeRateFromGoogle(from, to = 'IDR') {
     return new Promise((resolve, reject) => {
         const url = `https://www.google.com/finance/quote/${from}-${to}`;
-        
+
         function fetchUrl(currentUrl, depth) {
             if (depth > 5) {
                 return reject(new Error('Too many redirects'));
@@ -421,7 +531,7 @@ function getExchangeRateFromGoogle(from, to = 'IDR') {
                         if (match) {
                             return resolve(parseFloat(match[1]));
                         }
-                        
+
                         const regexClass = /class="YMlKec fxfa3d"[^>]*>([\d,.]+)</;
                         const matchClass = data.match(regexClass);
                         if (matchClass) {
@@ -457,19 +567,16 @@ app.get('/api/kurs/:currency', checkAuth, async (req, res) => {
     }
 });
 
-app.get('/api/next-frp-number/:department', checkAuth, (req, res) => {
-    const requests = readJson('requests.json');
-    const departmentsData = readJson('departments.json');
-    const dept = (req.params.department || '').trim().toUpperCase();
-    const deptData = departmentsData.find(d => 
-        (d.class || '').trim().toUpperCase() === dept || 
-        (d.name || '').trim().toUpperCase() === dept
-    );
-    const deptCode = deptData ? deptData.kodeFrp : dept.substring(0, 3).toUpperCase();
-    const prefix = `FRP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
-    const sequences = requests.filter(r => r.frpNo && r.frpNo.startsWith(prefix)).map(r => parseInt(r.frpNo.split('-').pop(), 10) || 0);
-    const nextSeq = Math.max(0, ...sequences) + 1;
-    res.json({ frpNo: `${prefix}${nextSeq.toString().padStart(5, '0')}` });
+app.get('/api/next-frp-number/:department', checkAuth, async (req, res) => {
+    try {
+        const requests = readJson('requests.json');
+        const dept = (req.params.department || '').trim().toUpperCase();
+        const deptCode = await getDeptCode(dept);
+        const prefix = `FRP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
+        const sequences = requests.filter(r => r.frpNo && r.frpNo.startsWith(prefix)).map(r => parseInt(r.frpNo.split('-').pop(), 10) || 0);
+        const nextSeq = Math.max(0, ...sequences) + 1;
+        res.json({ frpNo: `${prefix}${nextSeq.toString().padStart(5, '0')}` });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- APPROVAL ROUTES ---
@@ -511,26 +618,21 @@ app.get('/api/data/approval', checkAuth, (req, res) => {
 // --- FRP ACTIONS ---
 app.get('/frp/:id', checkAuth, (req, res) => sendSPA(res));
 
-app.get('/api/frp/:id', checkAuth, (req, res) => {
-    const data = readJson('requests.json').find(r => r.id === req.params.id);
-    if (!data) return res.status(404).json({ error: 'Not found' });
-    const user = req.session.user;
-    const isIT = user.role === 'administrator' || user.class === 'IT';
-    const canApprove = isIT || ['Manager', 'Direktur', 'Komisaris'].includes(user.selectedJobLevel);
-    const canEdit = isIT;
+app.get('/api/frp/:id', checkAuth, async (req, res) => {
+    try {
+        const data = readJson('requests.json').find(r => r.id === req.params.id);
+        if (!data) return res.status(404).json({ error: 'Not found' });
+        const user = req.session.user;
+        const isIT = user.role === 'administrator' || user.selectedDivision === 'IT';
+        const canApprove = isIT || ['Manager', 'Direktur', 'Komisaris'].includes(user.selectedJobLevel);
+        const canEdit = isIT;
+        const employees = await getAllEmployees();
 
-    res.json({
-        data,
-        employees: readJson('employees.json'),
-        companies: readJson('companies.json'),
-        user,
-        isIT,
-        canApprove,
-        canEdit
-    });
+        res.json({ data, employees, companies: readJson('companies.json'), user, isIT, canApprove, canEdit });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/frp/save', checkAuth, (req, res) => {
+app.post('/api/frp/save', checkAuth, async (req, res) => {
     try {
         let requests = readJson('requests.json');
 
@@ -544,13 +646,8 @@ app.post('/api/frp/save', checkAuth, (req, res) => {
             return res.json({ success: true, id: updatedReq.id, frpNo: updatedReq.frpNo });
         }
 
-        const departmentsData = readJson('departments.json');
         const dept = (req.body.divisi || 'GENERAL').trim().toUpperCase();
-        const deptData = departmentsData.find(d => 
-            (d.class || '').trim().toUpperCase() === dept || 
-            (d.name || '').trim().toUpperCase() === dept
-        );
-        const deptCode = deptData ? deptData.kodeFrp : dept.substring(0, 3).toUpperCase();
+        const deptCode = await getDeptCode(dept);
         const prefix = `FRP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
         const sequences = requests.filter(r => r.frpNo && r.frpNo.startsWith(prefix)).map(r => parseInt(r.frpNo.split('-').pop(), 10) || 0);
         const nextSeq = Math.max(0, ...sequences) + 1;
@@ -559,7 +656,6 @@ app.post('/api/frp/save', checkAuth, (req, res) => {
         requests.push(newReq);
         writeJson('requests.json', requests);
 
-        // Update originating RP status to CREATED_FRP if fromRpId is provided
         if (req.body.fromRpId) {
             let rpRequests = readJson('rp-requests.json');
             const rpIdx = rpRequests.findIndex(r => r.id === req.body.fromRpId);
@@ -573,23 +669,37 @@ app.post('/api/frp/save', checkAuth, (req, res) => {
     } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-app.post('/api/frp/:id/:action', checkAuth, (req, res) => {
-    let requests = readJson('requests.json');
-    const idx = requests.findIndex(r => r.id === req.params.id);
-    if (idx === -1) return res.json({ success: false });
-    const action = req.params.action;
-    if (action === 'approve') { requests[idx].status = 'APPROVED'; requests[idx].approvedByActual = req.session.user.fullName; const employees = readJson('employees.json'); const divisi = requests[idx].divisi || ''; const mgr = employees.find(e => (e.companies || []).some(a => a.class === divisi && ['Manager', 'Direktur', 'Komisaris'].includes(a.jobLevel))); requests[idx].approvedBy = mgr ? mgr.fullName : req.session.user.fullName; requests[idx].approvedAt = new Date().toISOString(); }
-    else if (action === 'reject') requests[idx].status = 'REJECTED';
-    else if (action === 'delete') requests.splice(idx, 1);
-    else if (action === 'revert') { 
-        if (req.session.user.role !== 'administrator') return res.status(403).json({ success: false, error: 'Hanya administrator yang bisa melakukan revert' });
-        requests[idx].status = 'PENDING'; 
-        delete requests[idx].approvedByActual; 
-        delete requests[idx].approvedAt; 
-    }
-    else if (action === 'update') { requests[idx] = { ...requests[idx], ...req.body, id: requests[idx].id, status: requests[idx].status, frpNo: requests[idx].frpNo }; }
-    writeJson('requests.json', requests);
-    res.json({ success: true });
+app.post('/api/frp/:id/:action', checkAuth, async (req, res) => {
+    try {
+        let requests = readJson('requests.json');
+        const idx = requests.findIndex(r => r.id === req.params.id);
+        if (idx === -1) return res.json({ success: false });
+        const action = req.params.action;
+        if (action === 'approve') {
+            requests[idx].status = 'APPROVED';
+            requests[idx].approvedByActual = req.session.user.fullName;
+            const divisi = requests[idx].divisi || '';
+            const [mgrRows] = await db.query(
+                USER_SQL + ' AND md.name = ? AND mjl.level >= 4 ORDER BY mjl.level DESC LIMIT 1',
+                [divisi]
+            );
+            requests[idx].approvedBy = mgrRows.length ? mgrRows[0].name : req.session.user.fullName;
+            requests[idx].approvedAt = new Date().toISOString();
+        } else if (action === 'reject') {
+            requests[idx].status = 'REJECTED';
+        } else if (action === 'delete') {
+            requests.splice(idx, 1);
+        } else if (action === 'revert') {
+            if (req.session.user.role !== 'administrator') return res.status(403).json({ success: false, error: 'Hanya administrator yang bisa melakukan revert' });
+            requests[idx].status = 'PENDING';
+            delete requests[idx].approvedByActual;
+            delete requests[idx].approvedAt;
+        } else if (action === 'update') {
+            requests[idx] = { ...requests[idx], ...req.body, id: requests[idx].id, status: requests[idx].status, frpNo: requests[idx].frpNo };
+        }
+        writeJson('requests.json', requests);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
 // --- DASHBOARD ROUTE ---
@@ -646,7 +756,6 @@ app.get('/api/data/dashboard', checkAuth, (req, res) => {
             createdAt: r.createdAt,
         }));
 
-    // Monthly trend — last 6 months
     const now = new Date();
     const monthly = Array.from({ length: 6 }, (_, i) => {
         const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
@@ -668,7 +777,6 @@ app.get('/api/data/dashboard', checkAuth, (req, res) => {
         }
     });
 
-    // Top vendors by approved amount
     const vendorMap = {};
     approved.forEach(r => {
         const v = r.vendor || 'Unknown';
@@ -679,7 +787,6 @@ app.get('/api/data/dashboard', checkAuth, (req, res) => {
         .slice(0, 5)
         .map(([name, amount]) => ({ name, amount }));
 
-    // Per divisi breakdown
     const divisiMap = {};
     requests.forEach(r => {
         const d = r.divisi || 'Unknown';
@@ -845,54 +952,117 @@ app.post('/api/laporan/pdf', checkAuth, checkLaporan, async (req, res) => {
 // --- ADMIN ROUTES ---
 app.get('/admin/:type', checkAuth, checkIT, (req, res) => sendSPA(res));
 
-app.get('/api/data/admin', checkAuth, checkIT, (req, res) => {
+app.get('/api/data/admin', checkAuth, checkIT, async (req, res) => {
     const type = req.query.type;
     if (!['employees', 'vendors', 'budgets', 'departments', 'roles'].includes(type)) {
         return res.status(400).json({ error: 'Invalid type' });
     }
     const u = req.session.user;
-    const listData = readJson(`${type}.json`).map((item, index) => ({ ...item, originalIndex: index }));
-    const employeeList = readJson('employees.json');
-    res.json({
-        activeType: type,
-        listData,
-        employeeList,
-        user: { fullName: u.fullName, role: u.role, selectedJobLevel: u.selectedJobLevel, allAssignments: u.allAssignments || [] }
-    });
+    try {
+        let listData;
+        if (type === 'employees') {
+            listData = await getAllEmployees();
+        } else if (type === 'departments') {
+            const [rows] = await db.query('SELECT id, name, class, code AS kodeFrp, company FROM master_departments ORDER BY name');
+            listData = rows.map((r, i) => ({ ...r, originalIndex: r.id }));
+        } else {
+            listData = readJson(`${type}.json`).map((item, index) => ({ ...item, originalIndex: index }));
+        }
+        const employeeList = await getAllEmployees();
+        res.json({
+            activeType: type,
+            listData,
+            employeeList,
+            user: { fullName: u.fullName, role: u.role, selectedJobLevel: u.selectedJobLevel, allAssignments: u.allAssignments || [] }
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/admin/:type/add', checkAuth, checkIT, (req, res) => {
+app.post('/api/admin/:type/add', checkAuth, checkIT, async (req, res) => {
     const type = req.params.type;
-    const data = readJson(`${type}.json`);
-    let newItem = req.body;
-    if (type === 'employees' && newItem.companies) {
-        if (!Array.isArray(newItem.companies)) newItem.companies = Object.values(newItem.companies);
-    }
-    if (type === 'budgets' && newItem.totalAmount) newItem.totalAmount = parseInt(String(newItem.totalAmount).replace(/[^0-9]/g, ''), 10) || 0;
-    data.push(newItem);
-    writeJson(`${type}.json`, data);
-    res.json({ success: true });
+    try {
+        if (type === 'employees') {
+            const { fullName, email, companies = [] } = req.body;
+            const assignment = Array.isArray(companies) ? companies[0] : (companies['0'] || {});
+            const deptId = await getDeptId(assignment.class || '');
+            const jobLevelId = await getJobLevelId(assignment.jobLevel || 'Staff');
+            const username = (fullName || '').toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
+            const passwordHash = bcrypt.hashSync('12345', 10);
+            await db.query(
+                'INSERT INTO central_users (id, name, email, username, password, department_id, job_level_id, is_active) VALUES (UUID(), ?, ?, ?, ?, ?, ?, 1)',
+                [fullName, email || null, username, passwordHash, deptId, jobLevelId]
+            );
+            return res.json({ success: true });
+        }
+        if (type === 'departments') {
+            const { name, class: cls, kodeFrp, company } = req.body;
+            const [existing] = await db.query('SELECT MAX(id) AS maxId FROM master_departments');
+            const nextId = (existing[0].maxId || 0) + 1;
+            await db.query(
+                'INSERT INTO master_departments (id, name, class, code, company) VALUES (?, ?, ?, ?, ?)',
+                [nextId, name, cls || name, kodeFrp || '', company || 'PNM']
+            );
+            return res.json({ success: true });
+        }
+        // JSON-backed types
+        const data = readJson(`${type}.json`);
+        let newItem = req.body;
+        if (type === 'budgets' && newItem.totalAmount) newItem.totalAmount = parseInt(String(newItem.totalAmount).replace(/[^0-9]/g, ''), 10) || 0;
+        data.push(newItem);
+        writeJson(`${type}.json`, data);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-app.post('/api/admin/:type/delete/:index', checkAuth, checkIT, (req, res) => {
+app.post('/api/admin/:type/delete/:index', checkAuth, checkIT, async (req, res) => {
     const type = req.params.type;
-    const data = readJson(`${type}.json`);
-    data.splice(parseInt(req.params.index, 10), 1);
-    writeJson(`${type}.json`, data);
-    res.json({ success: true });
+    const index = req.params.index;
+    try {
+        if (type === 'employees') {
+            await db.query('DELETE FROM central_users WHERE id = ?', [index]);
+            return res.json({ success: true });
+        }
+        if (type === 'departments') {
+            await db.query('DELETE FROM master_departments WHERE id = ?', [parseInt(index, 10)]);
+            return res.json({ success: true });
+        }
+        const data = readJson(`${type}.json`);
+        data.splice(parseInt(index, 10), 1);
+        writeJson(`${type}.json`, data);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
-app.post('/api/admin/:type/edit/:index', checkAuth, checkIT, (req, res) => {
+app.post('/api/admin/:type/edit/:index', checkAuth, checkIT, async (req, res) => {
     const type = req.params.type;
-    const data = readJson(`${type}.json`);
-    let updatedItem = req.body;
-    if (type === 'employees' && updatedItem.companies) {
-        if (!Array.isArray(updatedItem.companies)) updatedItem.companies = Object.values(updatedItem.companies);
-    }
-    if (type === 'budgets' && updatedItem.totalAmount) updatedItem.totalAmount = parseInt(String(updatedItem.totalAmount).replace(/[^0-9]/g, ''), 10) || 0;
-    data[parseInt(req.params.index, 10)] = updatedItem;
-    writeJson(`${type}.json`, data);
-    res.json({ success: true });
+    const index = req.params.index;
+    try {
+        if (type === 'employees') {
+            const { fullName, email, companies = [] } = req.body;
+            const assignment = Array.isArray(companies) ? companies[0] : (companies['0'] || {});
+            const deptId = await getDeptId(assignment.class || '');
+            const jobLevelId = await getJobLevelId(assignment.jobLevel || 'Staff');
+            await db.query(
+                'UPDATE central_users SET name = ?, email = ?, department_id = ?, job_level_id = ? WHERE id = ?',
+                [fullName, email || null, deptId, jobLevelId, index]
+            );
+            return res.json({ success: true });
+        }
+        if (type === 'departments') {
+            const { name, class: cls, kodeFrp, company } = req.body;
+            await db.query(
+                'UPDATE master_departments SET name = ?, class = ?, code = ?, company = ? WHERE id = ?',
+                [name, cls || name, kodeFrp || '', company || 'PNM', parseInt(index, 10)]
+            );
+            return res.json({ success: true });
+        }
+        const data = readJson(`${type}.json`);
+        let updatedItem = req.body;
+        if (type === 'budgets' && updatedItem.totalAmount) updatedItem.totalAmount = parseInt(String(updatedItem.totalAmount).replace(/[^0-9]/g, ''), 10) || 0;
+        data[parseInt(index, 10)] = updatedItem;
+        writeJson(`${type}.json`, data);
+        res.json({ success: true });
+    } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
 // --- HISTORY ROUTE ---
@@ -920,82 +1090,82 @@ app.get('/rp-approval', checkAuth, (req, res) => sendSPA(res));
 app.get('/rp-approved', checkAuth, (req, res) => sendSPA(res));
 app.get('/rp/:id', checkAuth, (req, res) => sendSPA(res));
 
-app.get('/api/rp/form-data', checkAuth, (req, res) => {
-    const u = req.session.user;
-    const employeesData = readJson('employees.json');
-    const budgetsData = readJson('budgets.json');
-    const vendorsData = readJson('vendors.json');
-    const departmentsData = readJson('departments.json');
-    const rpRequests = readJson('rp-requests.json');
-    const frpRequests = readJson('requests.json');
+app.get('/api/rp/form-data', checkAuth, async (req, res) => {
+    try {
+        const u = req.session.user;
+        const [employees, deptRows] = await Promise.all([
+            getAllEmployees(),
+            db.query('SELECT id, name, class, code AS kodeFrp, company FROM master_departments ORDER BY name').then(([r]) => r),
+        ]);
+        const departmentsData = deptRows.map(r => ({ ...r, originalIndex: r.id }));
+        const processDivisions = [...new Set(departmentsData.map(d => d.name).filter(Boolean))].sort();
 
-    // Calculate used budgets from both RP and FRP
-    const usedBudgets = {};
-    frpRequests.forEach(r => {
-        if (r.status === 'APPROVED' && r.items) {
-            r.items.forEach(item => {
-                const bId = item.budgetId;
-                const amt = parseInt(String(item.amount || '0').replace(/[^0-9]/g, ''), 10) || 0;
-                usedBudgets[bId] = (usedBudgets[bId] || 0) + amt;
-            });
+        const budgetsData = readJson('budgets.json');
+        const vendorsData = readJson('vendors.json');
+        const rpRequests = readJson('rp-requests.json');
+        const frpRequests = readJson('requests.json');
+
+        const usedBudgets = {};
+        frpRequests.forEach(r => {
+            if (r.status === 'APPROVED' && r.items) {
+                r.items.forEach(item => {
+                    const bId = item.budgetId;
+                    const amt = parseInt(String(item.amount || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                    usedBudgets[bId] = (usedBudgets[bId] || 0) + amt;
+                });
+            }
+        });
+        rpRequests.forEach(r => {
+            if (r.status === 'APPROVED' && r.items) {
+                r.items.forEach(item => {
+                    const bId = item.budgetId;
+                    const amt = parseInt(String(item.estimatedValue || '0').replace(/[^0-9]/g, ''), 10) || 0;
+                    usedBudgets[bId] = (usedBudgets[bId] || 0) + (amt * (parseInt(item.qty) || 1));
+                });
+            }
+        });
+
+        const budgetsWithRemaining = budgetsData.map(b => ({
+            ...b,
+            remainingAmount: (b.totalAmount || 0) - (usedBudgets[b.id] || 0)
+        }));
+
+        let editData = null;
+        if (req.query.revisi) {
+            editData = rpRequests.find(r => r.id === req.query.revisi);
+        } else if (req.query.process) {
+            editData = rpRequests.find(r => r.id === req.query.process);
         }
-    });
-    rpRequests.forEach(r => {
-        if (r.status === 'APPROVED' && r.items) {
-            r.items.forEach(item => {
-                const bId = item.budgetId;
-                const amt = parseInt(String(item.estimatedValue || '0').replace(/[^0-9]/g, ''), 10) || 0;
-                usedBudgets[bId] = (usedBudgets[bId] || 0) + (amt * (parseInt(item.qty) || 1));
-            });
-        }
-    });
 
-    const budgetsWithRemaining = budgetsData.map(b => ({
-        ...b,
-        remainingAmount: (b.totalAmount || 0) - (usedBudgets[b.id] || 0)
-    }));
-
-    // Get unique divisi classes for the "Diproses Oleh" dropdown
-    const processDivisions = [...new Set(departmentsData.map(d => d.class).filter(Boolean))].sort();
-
-    let editData = null;
-    if (req.query.revisi) {
-        editData = rpRequests.find(r => r.id === req.query.revisi);
-    } else if (req.query.process) {
-        editData = rpRequests.find(r => r.id === req.query.process);
-    }
-
-    res.json({
-        employees: employeesData,
-        budgets: budgetsWithRemaining,
-        vendors: vendorsData,
-        departments: departmentsData,
-        processDivisions,
-        user: {
-            ...u,
+        res.json({
+            employees,
+            budgets: budgetsWithRemaining,
+            vendors: vendorsData,
+            departments: departmentsData,
+            processDivisions,
+            user: {
+                ...u,
+                selectedCompany: u.selectedCompany || '',
+                selectedDivision: u.selectedDivision || '',
+                selectedJobLevel: u.selectedJobLevel || ''
+            },
             selectedCompany: u.selectedCompany || '',
             selectedDivision: u.selectedDivision || '',
-            selectedJobLevel: u.selectedJobLevel || ''
-        },
-        selectedCompany: u.selectedCompany || '',
-        selectedDivision: u.selectedDivision || '',
-        editData
-    });
+            editData
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/rp/next-number/:department', checkAuth, (req, res) => {
-    const rpRequests = readJson('rp-requests.json');
-    const departmentsData = readJson('departments.json');
-    const dept = (req.params.department || '').trim().toUpperCase();
-    const deptData = departmentsData.find(d =>
-        (d.class || '').trim().toUpperCase() === dept ||
-        (d.name || '').trim().toUpperCase() === dept
-    );
-    const deptCode = deptData ? deptData.kodeFrp : dept.substring(0, 3).toUpperCase();
-    const prefix = `RP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
-    const sequences = rpRequests.filter(r => r.rpNo && r.rpNo.startsWith(prefix)).map(r => parseInt(r.rpNo.split('-').pop(), 10) || 0);
-    const nextSeq = Math.max(0, ...sequences) + 1;
-    res.json({ rpNo: `${prefix}${nextSeq.toString().padStart(5, '0')}` });
+app.get('/api/rp/next-number/:department', checkAuth, async (req, res) => {
+    try {
+        const rpRequests = readJson('rp-requests.json');
+        const dept = (req.params.department || '').trim().toUpperCase();
+        const deptCode = await getDeptCode(dept);
+        const prefix = `RP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
+        const sequences = rpRequests.filter(r => r.rpNo && r.rpNo.startsWith(prefix)).map(r => parseInt(r.rpNo.split('-').pop(), 10) || 0);
+        const nextSeq = Math.max(0, ...sequences) + 1;
+        res.json({ rpNo: `${prefix}${nextSeq.toString().padStart(5, '0')}` });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/rp/save', checkAuth, (req, res) => {
@@ -1004,7 +1174,6 @@ app.post('/api/rp/save', checkAuth, (req, res) => {
         const u = req.session.user;
 
         if (req.body.rpId) {
-            // Revision
             const idx = rpRequests.findIndex(r => r.id === req.body.rpId);
             if (idx === -1) return res.json({ success: false, error: 'RP not found for revision' });
             const updatedReq = { ...rpRequests[idx], ...req.body, id: rpRequests[idx].id, rpNo: rpRequests[idx].rpNo, status: 'PENDING_MANAGER' };
@@ -1014,7 +1183,6 @@ app.post('/api/rp/save', checkAuth, (req, res) => {
             return res.json({ success: true, rpNo: rpRequests[idx].rpNo, id: rpRequests[idx].id });
         }
 
-        // New RP
         const id = 'rp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         const newRp = {
             id,
@@ -1047,7 +1215,6 @@ app.get('/api/data/rp-approval', checkAuth, (req, res) => {
     const view = req.query.view || 'pending';
     let reqs = readJson('rp-requests.json');
 
-    // Calculate counts for each view dynamically
     const pendingCount = reqs.filter(r => r.status === 'PENDING_MANAGER' && (u.role === 'administrator' || r.divisi === u.selectedDivision)).length;
     const processCount = reqs.filter(r => r.status === 'PENDING_PROCESS' && (u.role === 'administrator' || r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision)).length;
     const processApprovalCount = reqs.filter(r => r.status === 'PENDING_PROCESS_APPROVAL' && (u.role === 'administrator' || r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision)).length;
@@ -1059,7 +1226,6 @@ app.get('/api/data/rp-approval', checkAuth, (req, res) => {
             reqs = reqs.filter(r => r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision);
         }
     } else if (view === 'process') {
-        // Items pending processing by the processing division
         reqs = reqs.filter(r => r.status === 'PENDING_PROCESS');
         if (u.role !== 'administrator') {
             reqs = reqs.filter(r => r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision);
@@ -1070,7 +1236,6 @@ app.get('/api/data/rp-approval', checkAuth, (req, res) => {
             reqs = reqs.filter(r => r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision);
         }
     } else {
-        // Default: pending manager approval
         reqs = reqs.filter(r => r.status === 'PENDING_MANAGER');
         if (u.role !== 'administrator') {
             reqs = reqs.filter(r => r.divisi === u.selectedDivision);
@@ -1093,24 +1258,27 @@ app.get('/api/data/rp-approval', checkAuth, (req, res) => {
     });
 });
 
-app.get('/api/rp/:id', checkAuth, (req, res) => {
-    const data = readJson('rp-requests.json').find(r => r.id === req.params.id);
-    if (!data) return res.status(404).json({ error: 'Not found' });
-    const user = req.session.user;
-    const isAdmin = user.role === 'administrator';
-    const canApprove = isAdmin || ['Manager', 'Direktur', 'Komisaris'].includes(user.selectedJobLevel);
-    const isProcessDivision = isAdmin || user.selectedDivision === data.diprosesOleh;
+app.get('/api/rp/:id', checkAuth, async (req, res) => {
+    try {
+        const data = readJson('rp-requests.json').find(r => r.id === req.params.id);
+        if (!data) return res.status(404).json({ error: 'Not found' });
+        const user = req.session.user;
+        const isAdmin = user.role === 'administrator';
+        const canApprove = isAdmin || ['Manager', 'Direktur', 'Komisaris'].includes(user.selectedJobLevel);
+        const isProcessDivision = isAdmin || user.selectedDivision === data.diprosesOleh;
+        const employees = await getAllEmployees();
 
-    res.json({
-        data,
-        employees: readJson('employees.json'),
-        vendors: readJson('vendors.json'),
-        budgets: readJson('budgets.json'),
-        user,
-        isAdmin,
-        canApprove,
-        isProcessDivision
-    });
+        res.json({
+            data,
+            employees,
+            vendors: readJson('vendors.json'),
+            budgets: readJson('budgets.json'),
+            user,
+            isAdmin,
+            canApprove,
+            isProcessDivision
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
@@ -1123,7 +1291,6 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
     const u = req.session.user;
     const isAdmin = u.role === 'administrator';
 
-    // Authorization checks for different actions based on division and role
     if (action === 'manager-approve' || action === 'manager-reject') {
         if (!isAdmin) {
             const isManager = ['Manager', 'Direktur', 'Komisaris'].includes(u.selectedJobLevel);
@@ -1165,7 +1332,6 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
     }
 
     if (action === 'manager-approve') {
-        // Manager of requester's division approves
         if (rp.status !== 'PENDING_MANAGER') return res.json({ success: false, error: 'Invalid status for this action' });
         rp.status = 'PENDING_PROCESS';
         rp.managerApprovedBy = u.fullName;
@@ -1178,10 +1344,8 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
         rp.rejectedReason = req.body.reason || '';
         rp.rejectedStage = 'manager';
     } else if (action === 'process-update') {
-        // Processing division updates the RP data
         if (rp.status !== 'PENDING_PROCESS') return res.json({ success: false, error: 'Invalid status' });
 
-        // Track changes (old vs new)
         const changes = [];
         const headerFields = ['vendorSuggestion', 'tanggalDibutuhkan', 'picPenerima', 'deskripsi'];
         headerFields.forEach(field => {
@@ -1190,7 +1354,6 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
             }
         });
 
-        // Track item changes
         const newItems = req.body.items || rp.items;
         const oldItems = rp.items || [];
         newItems.forEach((newItem, i) => {
@@ -1202,7 +1365,6 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
             });
         });
 
-        // Update the data
         headerFields.forEach(field => {
             if (req.body[field] !== undefined) rp[field] = req.body[field];
         });
@@ -1213,7 +1375,6 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
         rp.processUpdatedAt = new Date().toISOString();
         rp.status = 'PENDING_PROCESS_APPROVAL';
     } else if (action === 'process-direct') {
-        // Processing division directly moves to process-approval without changes
         if (rp.status !== 'PENDING_PROCESS') return res.json({ success: false, error: 'Invalid status' });
         rp.processUpdatedBy = u.fullName;
         rp.processUpdatedAt = new Date().toISOString();
@@ -1280,7 +1441,7 @@ app.get('/api/rp/:id/pdf', checkAuth, async (req, res) => {
     try {
         const data = readJson('rp-requests.json').find(r => r.id === req.params.id);
         if (!data) return res.status(404).send('Not found');
-        
+
         const html = renderRpPdfDocument(data, false);
         const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
         const page = await browser.newPage();

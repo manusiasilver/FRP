@@ -12,10 +12,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "google-auth-library": "^10.6.2",
     "googleapis": "^171.4.0",
+    "mysql2": "^3.22.3",
     "puppeteer": "^24.43.1"
   }
 }

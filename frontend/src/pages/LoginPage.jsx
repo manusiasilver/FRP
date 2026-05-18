@@ -43,8 +43,8 @@ export default function LoginPage() {
         {error && <div style={S.error}>{error}</div>}
         <form onSubmit={handleSubmit}>
           <div style={S.formGroup}>
-            <label style={S.label}>Nama Lengkap</label>
-            <input style={S.input} placeholder="Contoh: Budi Santoso" value={username} onChange={e => setUsername(e.target.value)} required />
+            <label style={S.label}>Username</label>
+            <input style={S.input} placeholder="Contoh: budi.santoso" value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
           <div style={S.formGroup}>
             <label style={S.label}>Password</label>
