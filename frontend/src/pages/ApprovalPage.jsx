@@ -286,6 +286,26 @@ export default function ApprovalPage() {
     status: '',
     division: '',
   })
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' })
+
+  const requestSort = (key) => {
+    if (!key) return
+    let direction = 'asc'
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const renderSortIcon = (key) => {
+    if (!key) return null
+    if (sortConfig.key !== key) {
+      return <span className="material-icons-round" style={{ fontSize: '14px', marginLeft: '4px', verticalAlign: 'middle', opacity: 0.3 }}>unfold_more</span>
+    }
+    return sortConfig.direction === 'asc' 
+      ? <span className="material-icons-round" style={{ fontSize: '14px', marginLeft: '4px', verticalAlign: 'middle', color: '#2563eb' }}>arrow_upward</span>
+      : <span className="material-icons-round" style={{ fontSize: '14px', marginLeft: '4px', verticalAlign: 'middle', color: '#2563eb' }}>arrow_downward</span>
+  }
 
   const loadData = () => {
     fetch(`/api/data/approval?view=${isApprovedView ? 'approved' : 'pending'}`)
@@ -342,7 +362,7 @@ export default function ApprovalPage() {
       return []
     }
 
-    return data.requests.filter((request) => {
+    const filteredList = data.requests.filter((request) => {
       const matchSearch =
         !filters.search ||
         (request.frpNo || '').toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -356,7 +376,33 @@ export default function ApprovalPage() {
 
       return matchSearch && matchDate && matchRequester && matchStatus && matchDivision
     })
-  }, [data, filters])
+
+    return filteredList.sort((a, b) => {
+      let valA, valB;
+      if (sortConfig.key === 'date') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (parseInt(a.id) || 0);
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (parseInt(b.id) || 0);
+        return sortConfig.direction === 'asc' ? timeA - timeB : timeB - timeA;
+      } else if (sortConfig.key === 'requester') {
+        valA = (a.dimintaOleh || '').toLowerCase();
+        valB = (b.dimintaOleh || '').toLowerCase();
+      } else if (sortConfig.key === 'division') {
+        valA = (a.divisi || '').toLowerCase();
+        valB = (b.divisi || '').toLowerCase();
+      } else if (sortConfig.key === 'status') {
+        valA = (a.status || '').toLowerCase();
+        valB = (b.status || '').toLowerCase();
+      } else if (sortConfig.key === 'total') {
+        valA = calcTotal(a);
+        valB = calcTotal(b);
+        return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [data, filters, sortConfig])
 
   const doAction = async (id, action) => {
     const response = await fetch(`/api/frp/${id}/${action}`, { method: 'POST' })
@@ -467,14 +513,14 @@ export default function ApprovalPage() {
 
   const useCompactDesktopTable = !isMobile
   const desktopHeaders = [
-    'Ringkasan',
-    'Pemohon & Vendor',
-    'Divisi',
-    'Total',
-    'Status',
-    'Attach Link',
-    ...(data?.canApprove ? ['Aksi'] : []),
-    'Detail',
+    { label: 'Ringkasan', key: 'date' },
+    { label: 'Pemohon & Vendor', key: 'requester' },
+    { label: 'Divisi', key: 'division' },
+    { label: 'Total', key: 'total' },
+    { label: 'Status', key: 'status' },
+    { label: 'Attach Link', key: null },
+    ...(data?.canApprove ? [{ label: 'Aksi', key: null }] : []),
+    { label: 'Detail', key: null },
   ]
   const desktopColumnWidths = [
     '18%',
@@ -687,6 +733,7 @@ export default function ApprovalPage() {
                           {data?.canApprove && isApprovedView && user.role === 'administrator' && (
                             <button type="button" onClick={() => doAction(request.id, 'revert')} style={{ flex: 1, background: '#fef9c3', color: '#92400e', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', fontFamily: 'inherit' }}>Revert</button>
                           )}
+                          <button type="button" onClick={() => window.location.href = `/?revisi=${request.id}&duplicate=1`} style={{ flex: 1, background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit' }}>Duplicate</button>
                           <button type="button" onClick={() => setSelectedRequest(request)} style={{ flex: 1, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit' }}>Detail</button>
                         </div>
                       </div>
@@ -716,7 +763,8 @@ export default function ApprovalPage() {
                       <tr>
                         {desktopHeaders.map((header) => (
                           <th
-                            key={header}
+                            key={header.label}
+                            onClick={() => requestSort(header.key)}
                             style={{
                               padding: '10px 14px',
                               textAlign: 'left',
@@ -729,9 +777,14 @@ export default function ApprovalPage() {
                               background: '#f8fafc',
                               borderBottom: '2px solid #e2e8f0',
                               boxShadow: '0 2px 4px -1px rgba(15,23,42,0.06)',
+                              cursor: header.key ? 'pointer' : 'default',
+                              userSelect: 'none',
                             }}
                           >
-                            {header}
+                            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                              {header.label}
+                              {renderSortIcon(header.key)}
+                            </span>
                           </th>
                         ))}
                       </tr>
@@ -829,7 +882,10 @@ export default function ApprovalPage() {
                                   </td>
                                 ) : null}
                                 <td style={{ ...td, whiteSpace: 'normal' }}>
-                                  <button type="button" onClick={() => setSelectedRequest(request)} style={{ width: '100%', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '12px', fontFamily: 'inherit' }}>Detail</button>
+                                  <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
+                                    <button type="button" onClick={() => window.location.href = `/?revisi=${request.id}&duplicate=1`} style={{ width: '100%', background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '12px', fontFamily: 'inherit' }}>Duplicate</button>
+                                    <button type="button" onClick={() => setSelectedRequest(request)} style={{ width: '100%', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '12px', fontFamily: 'inherit' }}>Detail</button>
+                                  </div>
                                 </td>
                               </tr>
                               {isExpanded ? (

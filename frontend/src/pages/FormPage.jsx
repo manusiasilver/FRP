@@ -59,13 +59,13 @@ const blankForm = {
   fromRpId: '',
 }
 
-const buildInitialForm = data => {
+const buildInitialForm = (data, isDuplicate = false) => {
   const base = {
     ...blankForm,
     companyName: data.selectedCompany || '',
     divisi: data.selectedDivision || '',
     dimintaOleh: data.user?.fullName || '',
-    id: data.editData?.id || '',
+    id: isDuplicate ? '' : (data.editData?.id || ''),
   }
 
   if (!data.editData) return base
@@ -73,7 +73,12 @@ const buildInitialForm = data => {
   return {
     ...base,
     ...data.editData,
-    tanggalFrp: data.editData.tanggalFrp || today,
+    tanggalFrp: isDuplicate ? today : (data.editData.tanggalFrp || today),
+    id: isDuplicate ? '' : (data.editData.id || ''),
+    rpReference: isDuplicate ? '' : (data.editData.rpReference || ''),
+    fromRpId: isDuplicate ? '' : (data.editData.fromRpId || ''),
+    status: isDuplicate ? '' : (data.editData.status || ''),
+    frpNo: isDuplicate ? '' : (data.editData.frpNo || ''),
     paymentDate: data.editData.paymentDate || today,
     checkDocs: Array.isArray(data.editData.checkDocs) ? data.editData.checkDocs : base.checkDocs,
     items: Array.isArray(data.editData.items)
@@ -616,7 +621,8 @@ export default function FormPage() {
       })
       .then(async data => {
         setFrpData(data)
-        const initial = buildInitialForm(data)
+        const isDuplicate = searchParams.get('duplicate') === '1' || searchParams.get('duplicate') === 'true'
+        const initial = buildInitialForm(data, isDuplicate)
 
         const fromRpId = searchParams.get('fromRp')
         if (fromRpId) {
@@ -639,6 +645,8 @@ export default function FormPage() {
                 }
               }) : getDefaultItems()
 
+              const rpAttachLink = Array.isArray(rp.items) ? (rp.items.find(it => it.linkPembelian)?.linkPembelian || '') : ''
+
               setValues({
                 ...initial,
                 companyName: rp.companyName || initial.companyName,
@@ -647,6 +655,7 @@ export default function FormPage() {
                 keteranganFrp: rp.deskripsi || '',
                 vendor: rp.vendorSuggestion || '',
                 paymentDate: rp.tanggalDibutuhkan || today,
+                attachLink: rpAttachLink || '',
                 rpReference: rp.rpNo || '',
                 fromRpId: fromRpId,
                 items: mappedItems,
@@ -1217,7 +1226,7 @@ export default function FormPage() {
               )}
 
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', paddingBottom: '2rem', flexDirection: isMobile ? 'column-reverse' : 'row' }}>
-                <button type="button" style={{ ...S.btnSecondary, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }} onClick={() => setValues(buildInitialForm(FRP))} disabled={submitting}>
+                <button type="button" style={{ ...S.btnSecondary, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }} onClick={() => setValues(buildInitialForm(FRP, searchParams.get('duplicate') === '1' || searchParams.get('duplicate') === 'true'))} disabled={submitting}>
                   <span className="material-icons-round" style={{ fontSize: '18px' }}>refresh</span>
                   Reset
                 </button>

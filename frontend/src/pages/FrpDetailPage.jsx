@@ -99,6 +99,11 @@ export default function FrpDetailPage() {
     window.parent.location.href = `/?revisi=${data.id}`
   }
 
+  const duplicateForm = () => {
+    if (!window.confirm('Anda yakin ingin menduplikasi FRP ini menjadi form baru?')) return
+    window.parent.location.href = `/?revisi=${data.id}&duplicate=1`
+  }
+
   const fieldStyle = { width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', fontSize: '0.9rem', boxSizing: 'border-box', fontFamily: 'inherit' }
   const sectionStyle = { background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: isMobile ? '1rem' : '1.25rem', marginBottom: '0.75rem' }
   const labelStyle = { display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '4px' }
@@ -233,6 +238,10 @@ export default function FrpDetailPage() {
             <span className="material-icons-round" style={{ fontSize: '16px' }}>visibility</span>
             Preview dibuka tanpa dialog print otomatis
           </div>
+          <CreateButton variant="accordion" tone="primary" onClick={duplicateForm} style={mobileActionButtonStyle}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>content_copy</span>
+            Duplicate
+          </CreateButton>
           <CreateButton variant="accordion" tone="primary" onClick={() => openPrintPreview(data)} style={mobileActionButtonStyle}>
             <span className="material-icons-round" style={{ fontSize: '16px' }}>print</span>
             Preview
@@ -247,6 +256,10 @@ export default function FrpDetailPage() {
           </CreateButton>}
         </>}
         {data.status === 'PENDING' && <>
+          <CreateButton variant="accordion" tone="primary" onClick={duplicateForm} style={mobileActionButtonStyle}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>content_copy</span>
+            Duplicate
+          </CreateButton>
           {(canApprove || isIT || data.createdBy === user?.fullName) && <CreateButton variant="accordion" tone="danger" onClick={() => doAction('delete')} style={mobileActionButtonStyle}>
             <span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span>
             Hapus
@@ -265,6 +278,10 @@ export default function FrpDetailPage() {
           </CreateButton>}
         </>}
         {data.status === 'REJECTED' && <>
+          <CreateButton variant="accordion" tone="primary" onClick={duplicateForm} style={mobileActionButtonStyle}>
+            <span className="material-icons-round" style={{ fontSize: '16px' }}>content_copy</span>
+            Duplicate
+          </CreateButton>
           {(canApprove || isIT || data.createdBy === user?.fullName) && <CreateButton variant="accordion" tone="danger" onClick={() => doAction('delete')} style={mobileActionButtonStyle}>
             <span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span>
             Hapus

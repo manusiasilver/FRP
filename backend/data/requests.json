@@ -803,5 +803,117 @@
     "approvedByActual": "Bayu Noegroho",
     "approvedBy": "Yulliemty",
     "approvedAt": "2026-05-18T10:02:02.217Z"
+  },
+  {
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-19",
+    "divisi": "Gosave GT",
+    "dimintaOleh": "Egy Irsandi",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "ONE",
+    "internalPoNumber": "",
+    "extDocType": "",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-18",
+    "attachLink": "google.com",
+    "keteranganFrp": "beli mobil sales",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "beli mobil sales",
+        "budgetId": "GSG2602",
+        "qty": "1",
+        "hargaSatuan": "10,000,000",
+        "amount": 10000000
+      }
+    ],
+    "id": "mpc1f3kb",
+    "rpReference": "RP-GSG-26-00006",
+    "fromRpId": "rp-1779085752861-hq9voj24m",
+    "frpNo": "FRP-GSG-26-00002",
+    "requestBy": "Egy Irsandi",
+    "status": "PENDING",
+    "createdBy": "Trisha",
+    "createdAt": "2026-05-19T02:52:26.699Z"
+  },
+  {
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-19",
+    "divisi": "Product",
+    "dimintaOleh": "Trisha",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "EVERGREEN SHIPPING AGENCY INDONESIA, PT",
+    "internalPoNumber": "",
+    "extDocType": "",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-19",
+    "attachLink": "",
+    "keteranganFrp": "beli botol",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "botol",
+        "budgetId": "PRO2620",
+        "qty": "4",
+        "hargaSatuan": "1000",
+        "amount": 4000
+      }
+    ],
+    "id": "mpc1go4q",
+    "rpReference": "",
+    "fromRpId": "",
+    "bankTujuan": "P.T.EVERGREEN SHIPPING AGENCY INDONESIA (MANDIRI)",
+    "rekBankTujuan": "124.001.6768690",
+    "frpNo": "FRP-PRO-26-00005",
+    "requestBy": "Trisha",
+    "status": "PENDING",
+    "createdBy": "Trisha",
+    "createdAt": "2026-05-19T02:53:40.010Z"
+  },
+  {
+    "companyName": "PT PILAR NIAGA MAKMUR",
+    "tanggalFrp": "2026-05-19",
+    "divisi": "Product",
+    "dimintaOleh": "Trisha",
+    "currency": "IDR",
+    "kurs": "1",
+    "vendor": "EVERGREEN SHIPPING AGENCY INDONESIA, PT",
+    "internalPoNumber": "",
+    "extDocType": "",
+    "extDocNumber": "",
+    "paymentMethod": "Transfer",
+    "paymentDate": "2026-05-19",
+    "attachLink": "",
+    "keteranganFrp": "beli botol",
+    "checkDocs": [
+      "Form Request Payment"
+    ],
+    "items": [
+      {
+        "memo": "botol",
+        "budgetId": "PRO2620",
+        "qty": "4",
+        "hargaSatuan": "1000",
+        "amount": 4000
+      }
+    ],
+    "id": "mpc1h2cs",
+    "rpReference": "",
+    "fromRpId": "",
+    "bankTujuan": "P.T.EVERGREEN SHIPPING AGENCY INDONESIA (MANDIRI)",
+    "rekBankTujuan": "124.001.6768690",
+    "frpNo": "FRP-PRO-26-00006",
+    "requestBy": "Trisha",
+    "status": "PENDING",
+    "createdBy": "Trisha",
+    "createdAt": "2026-05-19T02:53:58.444Z"
   }
 ]

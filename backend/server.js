@@ -1221,14 +1221,16 @@ app.get('/api/data/rp-approval', checkAuth, (req, res) => {
     const view = req.query.view || 'pending';
     let reqs = readJson('rp-requests.json');
 
+    const isProductUser = u.selectedDivision && ['product', 'produk'].includes(u.selectedDivision.toLowerCase());
+
     const pendingCount = reqs.filter(r => r.status === 'PENDING_MANAGER' && (u.role === 'administrator' || r.divisi === u.selectedDivision)).length;
     const processCount = reqs.filter(r => r.status === 'PENDING_PROCESS' && (u.role === 'administrator' || r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision)).length;
     const processApprovalCount = reqs.filter(r => r.status === 'PENDING_PROCESS_APPROVAL' && (u.role === 'administrator' || r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision)).length;
-    const approvedCount = reqs.filter(r => (r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CREATED_FRP') && (u.role === 'administrator' || r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision)).length;
+    const approvedCount = reqs.filter(r => (r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CREATED_FRP') && (u.role === 'administrator' || isProductUser || r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision)).length;
 
     if (view === 'approved') {
         reqs = reqs.filter(r => r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CREATED_FRP');
-        if (u.role !== 'administrator') {
+        if (u.role !== 'administrator' && !isProductUser) {
             reqs = reqs.filter(r => r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision);
         }
     } else if (view === 'process') {

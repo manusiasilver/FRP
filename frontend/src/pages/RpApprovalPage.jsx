@@ -18,6 +18,26 @@ export default function RpApprovalPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' })
+
+  const requestSort = (key) => {
+    if (!key) return
+    let direction = 'asc'
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc'
+    }
+    setSortConfig({ key, direction })
+  }
+
+  const renderSortIcon = (key) => {
+    if (!key) return null
+    if (sortConfig.key !== key) {
+      return <span className="material-icons-round" style={{ fontSize: '14px', marginLeft: '4px', verticalAlign: 'middle', opacity: 0.3 }}>unfold_more</span>
+    }
+    return sortConfig.direction === 'asc' 
+      ? <span className="material-icons-round" style={{ fontSize: '14px', marginLeft: '4px', verticalAlign: 'middle', color: '#2563eb' }}>arrow_upward</span>
+      : <span className="material-icons-round" style={{ fontSize: '14px', marginLeft: '4px', verticalAlign: 'middle', color: '#2563eb' }}>arrow_downward</span>
+  }
 
   const loadData = (view) => {
     setLoading(true)
@@ -44,6 +64,39 @@ export default function RpApprovalPage() {
 
   const D = data || {}
   const reqs = D.requests || []
+  const sortedReqs = useMemo(() => {
+    const list = [...reqs];
+    return list.sort((a, b) => {
+      let valA, valB;
+      if (sortConfig.key === 'date') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (parseInt(a.id) || 0);
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (parseInt(b.id) || 0);
+        return sortConfig.direction === 'asc' ? timeA - timeB : timeB - timeA;
+      } else if (sortConfig.key === 'rpNo') {
+        valA = (a.rpNo || '').toLowerCase();
+        valB = (b.rpNo || '').toLowerCase();
+      } else if (sortConfig.key === 'division') {
+        valA = (a.divisi || '').toLowerCase();
+        valB = (b.divisi || '').toLowerCase();
+      } else if (sortConfig.key === 'creator') {
+        valA = (a.dibuatOleh || '').toLowerCase();
+        valB = (b.dibuatOleh || '').toLowerCase();
+      } else if (sortConfig.key === 'category') {
+        valA = (a.kategoriPembelian || '').toLowerCase();
+        valB = (b.kategoriPembelian || '').toLowerCase();
+      } else if (sortConfig.key === 'processor') {
+        valA = (a.diprosesOleh || '').toLowerCase();
+        valB = (b.diprosesOleh || '').toLowerCase();
+      } else if (sortConfig.key === 'status') {
+        valA = (a.status || '').toLowerCase();
+        valB = (b.status || '').toLowerCase();
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [reqs, sortConfig])
   const user = D.user || {}
   const isAdmin = user.role === 'administrator'
   const canApprove = D.canApprove
@@ -124,7 +177,10 @@ export default function RpApprovalPage() {
               <button onClick={() => window.open(`/api/rp/${rp.id}/preview`, '_blank')} style={{ padding:'10px 20px', background:'#f8fafc', color:'#475569', border:'1px solid #cbd5e1', borderRadius:'10px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Preview</button>
               <button onClick={() => window.open(`/api/rp/${rp.id}/pdf`, '_blank')} style={{ padding:'10px 20px', background:'#f1f5f9', color:'#1e293b', border:'1px solid #cbd5e1', borderRadius:'10px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Print PDF</button>
               
-              {rp.status === 'APPROVED' && (isAdmin || user.selectedDivision === 'IT' || user.selectedDivision === 'Product') && (
+              {rp.status === 'APPROVED' && (
+                isAdmin || 
+                (user.selectedDivision && ['it', 'product', 'produk'].includes(user.selectedDivision.toLowerCase()))
+              ) && (
                 <button onClick={() => navigate(`/frp?fromRp=${rp.id}`)} style={{ padding:'10px 20px', background:'#2563eb', color:'white', border:'none', borderRadius:'10px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Ke FRP</button>
               )}
               
@@ -186,12 +242,42 @@ export default function RpApprovalPage() {
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse', background:'white', borderRadius:'12px', overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
                 <thead><tr>
-                  {['No RP','Divisi','Dibuat Oleh','Kategori','Diproses Oleh','Status',''].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', background:'#f8fafc', borderBottom:'2px solid #e2e8f0', fontSize:'11px', fontWeight:700, color:'#64748b', textTransform:'uppercase' }}>{h}</th>)}
+                  {[
+                    { label: 'No RP', key: 'rpNo' },
+                    { label: 'Divisi', key: 'division' },
+                    { label: 'Dibuat Oleh', key: 'creator' },
+                    { label: 'Kategori', key: 'category' },
+                    { label: 'Diproses Oleh', key: 'processor' },
+                    { label: 'Status', key: 'status' },
+                    { label: '', key: null }
+                  ].map(h => (
+                    <th 
+                      key={h.label} 
+                      onClick={() => requestSort(h.key)}
+                      style={{ 
+                        padding:'12px', 
+                        textAlign:'left', 
+                        background:'#f8fafc', 
+                        borderBottom:'2px solid #e2e8f0', 
+                        fontSize:'11px', 
+                        fontWeight:700, 
+                        color:'#64748b', 
+                        textTransform:'uppercase',
+                        cursor: h.key ? 'pointer' : 'default',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {h.label}
+                        {renderSortIcon(h.key)}
+                      </span>
+                    </th>
+                  ))}
                 </tr></thead>
                 <tbody>
-                  {reqs.map(rp => (
-                    <tr key={rp.id} style={{ cursor:'pointer' }} onClick={() => setSelected(rp)}>
-                      <td style={{ padding:'12px', borderBottom:'1px solid #f1f5f9', fontWeight:700, color:'#1f4e8c' }}>{rp.rpNo||'-'}</td>
+                  {sortedReqs.map(rp => (
+                    <tr key={rp.id} onClick={() => setSelected(rp)} style={{ cursor:'pointer', background:'white', transition:'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.background='#f8fafc'} onMouseLeave={e => e.currentTarget.style.background='white'}>
+                      <td style={{ padding:'12px', borderBottom:'1px solid #f1f5f9', fontWeight:700, color:'#1e293b' }}>{rp.rpNo || 'Draft'}</td>
                       <td style={{ padding:'12px', borderBottom:'1px solid #f1f5f9' }}>{rp.divisi}</td>
                       <td style={{ padding:'12px', borderBottom:'1px solid #f1f5f9' }}>{rp.dibuatOleh}</td>
                       <td style={{ padding:'12px', borderBottom:'1px solid #f1f5f9' }}>{rp.kategoriPembelian}</td>
