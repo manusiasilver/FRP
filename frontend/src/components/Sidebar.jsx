@@ -47,27 +47,29 @@ function SidebarNavItem({ item, pathname, collapsed, expandedGroups, onToggleGro
     onSelect(item)
   }
 
+  const trigger = hasChildren ? (
+    <button type="button" className={className} data-tooltip={collapsed ? item.label : undefined} onClick={handleClick}>
+      {content}
+    </button>
+  ) : (
+    <a href={item.href} className={className} data-tooltip={collapsed ? item.label : undefined} onClick={handleClick}>
+      {content}
+    </a>
+  )
+
+  if (!hasChildren || collapsed) return trigger
+
   return (
-    <>
-      {hasChildren ? (
-        <button type="button" className={className} data-tooltip={collapsed ? item.label : undefined} onClick={handleClick}>
-          {content}
-        </button>
-      ) : (
-        <a href={item.href} className={className} data-tooltip={collapsed ? item.label : undefined} onClick={handleClick}>
-          {content}
-        </a>
-      )}
-      {hasChildren && !collapsed && (
-        <div className={`nav-submenu${expanded ? ' expanded' : ''}`}>
-          <div className="nav-submenu__inner">
-            {item.children.map(child => (
-              <SidebarNavItem key={getItemKey(child)} item={child} pathname={pathname} collapsed={collapsed} expandedGroups={expandedGroups} onToggleGroup={onToggleGroup} onSelect={onSelect} isChild />
-            ))}
-          </div>
+    <div className="nav-group">
+      {trigger}
+      <div className={`nav-submenu${expanded ? ' expanded' : ''}`}>
+        <div className="nav-submenu__inner">
+          {item.children.map(child => (
+            <SidebarNavItem key={getItemKey(child)} item={child} pathname={pathname} collapsed={collapsed} expandedGroups={expandedGroups} onToggleGroup={onToggleGroup} onSelect={onSelect} isChild />
+          ))}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   )
 }
 
@@ -86,7 +88,7 @@ function getInitialExpanded(pathname) {
   return initial
 }
 
-export default function Sidebar({ collapsed = false, mobileOpen = false, userName = 'User', userRole = 'Staff', userIsAdmin = false, allAssignments = [], onToggleCollapse, onCloseMobile, hideMenu = false }) {
+export default function Sidebar({ collapsed = false, mobileOpen = false, userName = 'User', userJobLevel = '', userDivision = '', userRole = 'staff', userIsAdmin = false, allAssignments = [], onToggleCollapse, onCloseMobile, hideMenu = false }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const [userExpandedGroups, setUserExpandedGroups] = useState({})
@@ -162,7 +164,10 @@ export default function Sidebar({ collapsed = false, mobileOpen = false, userNam
           </div>
           <div className="profile-info">
             <h3 className="profile-name">{userName}</h3>
-            <p className="profile-role">{userRole}</p>
+            <p className="profile-role">
+              {userJobLevel || (userIsAdmin ? 'Administrator' : 'Staff')}
+              {userDivision ? <span className="profile-division"> · {userDivision}</span> : null}
+            </p>
           </div>
         </div>
       </div>

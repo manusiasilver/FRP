@@ -23,7 +23,9 @@ export default function DashboardLayout() {
         collapsed={sidebarCollapsed}
         mobileOpen={mobileMenuOpen}
         userName={u.fullName}
-        userRole={u.selectedJobLevel || u.role}
+        userJobLevel={u.selectedJobLevel}
+        userDivision={u.selectedDivision}
+        userRole={u.role}
         userIsAdmin={u.role === 'administrator'}
         allAssignments={u.allAssignments || []}
         onToggleCollapse={handleSidebarToggle}

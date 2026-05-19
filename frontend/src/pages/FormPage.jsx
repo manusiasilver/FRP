@@ -1204,7 +1204,7 @@ export default function FormPage() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', paddingBottom: '2rem', flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', paddingBottom: '2rem', flexDirection: isMobile ? 'column-reverse' : 'row', justifyContent: 'flex-end' }}>
                 <button type="button" style={{ ...S.btnSecondary, width: isMobile ? '100%' : 'auto', justifyContent: 'center' }} onClick={() => setValues(buildInitialForm(FRP, searchParams.get('duplicate') === '1' || searchParams.get('duplicate') === 'true'))} disabled={submitting}>
                   <span className="material-icons-round" style={{ fontSize: '18px' }}>refresh</span>
                   Reset
