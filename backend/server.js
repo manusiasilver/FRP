@@ -42,6 +42,28 @@ const COMPANY_MAP = {
     'PKP': 'PT PILAR KARGO PERKASA',
 };
 
+const COMPANY_CODE_BY_NAME = Object.entries(COMPANY_MAP).reduce((acc, [code, name]) => {
+    acc[name] = code;
+    return acc;
+}, {});
+
+function normalizeCompanyCode(input) {
+    const value = (input || '').trim();
+    if (!value) return 'PNM';
+    const upper = value.toUpperCase().replace(/\s+/g, ' ');
+    if (COMPANY_MAP[upper]) return upper;
+    if (COMPANY_CODE_BY_NAME[upper]) return COMPANY_CODE_BY_NAME[upper];
+    if (upper.includes('KARANG') || upper.includes('SAMUD')) return 'PKS';
+    if (upper.includes('KARGO')) return 'PKP';
+    if (upper.includes('NIAGA')) return 'PNM';
+    return upper;
+}
+
+function normalizeCompanyName(code, name) {
+    const normalizedCode = normalizeCompanyCode(code || name);
+    return COMPANY_MAP[normalizedCode] || (name ? String(name).trim() : COMPANY_MAP.PNM);
+}
+
 function mapJobLevel(name) {
     if (!name) return 'Staff';
     if (name === 'Commissioner') return 'Komisaris';
@@ -51,69 +73,252 @@ function mapJobLevel(name) {
 }
 
 const USER_SQL = `
-    SELECT cu.id, cu.name, cu.email, cu.username, cu.department_id,
-           md.name AS dept_name, md.code AS dept_code, md.company AS company_code,
-           mjl.name AS job_level_name
+    SELECT cu.id, cu.name, cu.email, cu.username, cu.job_position,
+           cud.department_id,
+           md.name AS dept_name, md.class AS dept_class, md.code AS dept_code,
+           COALESCE(mc.id, uc.id) AS company_id,
+           COALESCE(mc.code, uc.code) AS company_code, COALESCE(mc.name, uc.name) AS company_name,
+           mjl.name AS job_level_name, mjl.level AS job_level_rank
     FROM central_users cu
-    LEFT JOIN master_departments md ON cu.department_id = md.id
+    LEFT JOIN central_user_departments cud ON cud.user_id = cu.id
+    LEFT JOIN master_departments md ON cud.department_id = md.id
+    LEFT JOIN master_companies mc ON md.company_id = mc.id
+    LEFT JOIN central_user_companies cuc ON cuc.user_id = cu.id AND cud.department_id IS NULL
+    LEFT JOIN master_companies uc ON cuc.company_id = uc.id
     LEFT JOIN master_job_levels mjl ON cu.job_level_id = mjl.id
     WHERE cu.is_active = 1
 `;
 
 const LOGIN_SQL = `
-    SELECT cu.id, cu.name, cu.email, cu.username, cu.password, cu.department_id,
-           md.name AS dept_name, md.code AS dept_code, md.company AS company_code,
-           mjl.name AS job_level_name
+    SELECT cu.id, cu.name, cu.email, cu.username, cu.password, cu.job_position,
+           cud.department_id,
+           md.name AS dept_name, md.class AS dept_class, md.code AS dept_code,
+           COALESCE(mc.id, uc.id) AS company_id,
+           COALESCE(mc.code, uc.code) AS company_code, COALESCE(mc.name, uc.name) AS company_name,
+           mjl.name AS job_level_name, mjl.level AS job_level_rank
     FROM central_users cu
-    LEFT JOIN master_departments md ON cu.department_id = md.id
+    LEFT JOIN central_user_departments cud ON cud.user_id = cu.id
+    LEFT JOIN master_departments md ON cud.department_id = md.id
+    LEFT JOIN master_companies mc ON md.company_id = mc.id
+    LEFT JOIN central_user_companies cuc ON cuc.user_id = cu.id AND cud.department_id IS NULL
+    LEFT JOIN master_companies uc ON cuc.company_id = uc.id
     LEFT JOIN master_job_levels mjl ON cu.job_level_id = mjl.id
     WHERE cu.is_active = 1 AND cu.username = ?
-    LIMIT 1
 `;
 
-function dbRowToEmployee(row) {
-    const companyName = COMPANY_MAP[row.company_code] || row.company_code || 'PT PILAR NIAGA MAKMUR';
-    const deptName = row.dept_name || '';
-    const jobLevel = mapJobLevel(row.job_level_name);
+const DEPARTMENT_SQL = `
+    SELECT md.id, md.name, md.class, md.code AS kodeFrp, md.parent_id,
+           mc.id AS companyId, mc.code AS companyCode, mc.name AS companyRawName
+    FROM master_departments md
+    LEFT JOIN master_companies mc ON md.company_id = mc.id
+`;
+
+function dbRowToDepartment(row) {
     return {
-        fullName: row.name,
-        email: row.email || '',
-        username: row.username,
-        role: row.department_id === 8 ? 'administrator' : 'user',
-        companies: [{ name: companyName, class: deptName, jobLevel }],
-        originalIndex: row.id,
+        id: row.id,
+        name: row.name,
+        class: row.class,
+        kodeFrp: row.kodeFrp,
+        company: normalizeCompanyName(row.companyCode, row.companyRawName),
+        companyCode: normalizeCompanyCode(row.companyCode || row.companyRawName),
+        companyId: row.companyId,
+        originalIndex: row.originalIndex ?? row.id,
     };
 }
 
-async function getAllEmployees() {
-    const [rows] = await db.query(USER_SQL + ' ORDER BY cu.name');
-    return rows.map(dbRowToEmployee);
+function dbRowsToEmployees(rows) {
+    const grouped = new Map();
+
+    rows.forEach(row => {
+        if (!grouped.has(row.id)) {
+            grouped.set(row.id, { row, assignments: [], assignmentKeys: new Set(), isAdmin: false });
+        }
+
+        const entry = grouped.get(row.id);
+        const deptName = row.dept_name || row.dept_class || '';
+        const jobLevel = mapJobLevel(row.job_level_name);
+        const companyName = normalizeCompanyName(row.company_code, row.company_name);
+
+        if (row.department_id === 8 || deptName.toUpperCase() === 'IT') {
+            entry.isAdmin = true;
+        }
+
+        if (deptName || row.company_code || row.company_name) {
+            const key = `${companyName}|${deptName}|${jobLevel}`;
+            if (!entry.assignmentKeys.has(key)) {
+                entry.assignmentKeys.add(key);
+                entry.assignments.push({
+                    id: row.company_id || '',
+                    companyId: row.company_id || '',
+                    code: normalizeCompanyCode(row.company_code || row.company_name),
+                    companyCode: normalizeCompanyCode(row.company_code || row.company_name),
+                    name: companyName,
+                    class: deptName,
+                    jobLevel
+                });
+            }
+        }
+    });
+
+    return [...grouped.values()].map(({ row, assignments, isAdmin }) => {
+        const jobLevel = mapJobLevel(row.job_level_name);
+        const fallbackAssignments = assignments.length
+            ? assignments
+            : [{ name: COMPANY_MAP.PNM, class: '', jobLevel }];
+
+        return {
+            fullName: row.name,
+            email: row.email || '',
+            username: row.username,
+            role: isAdmin ? 'administrator' : 'user',
+            companies: fallbackAssignments,
+            originalIndex: row.id,
+        };
+    });
 }
 
-async function getDeptCode(deptName) {
+async function getCompanies() {
+    const [rows] = await db.query(`
+        SELECT id, code, name
+        FROM master_companies
+        WHERE is_active = 1
+        ORDER BY CASE code WHEN 'PNM' THEN 1 WHEN 'PKS' THEN 2 WHEN 'PKP' THEN 3 ELSE 9 END, code
+    `);
+    return rows.map(row => ({
+        id: row.id,
+        code: normalizeCompanyCode(row.code),
+        name: normalizeCompanyName(row.code, row.name),
+    }));
+}
+
+async function getDepartmentRows() {
+    const [rows] = await db.query(DEPARTMENT_SQL + ' ORDER BY md.name');
+    return rows.map(dbRowToDepartment);
+}
+
+async function getCompanyRow(companyName, client = db) {
+    const code = normalizeCompanyCode(companyName);
+    const [rows] = await client.query(
+        'SELECT id, code, name FROM master_companies WHERE code = ? OR UPPER(name) = UPPER(?) LIMIT 1',
+        [code, companyName || '']
+    );
+    return rows[0] || null;
+}
+
+async function getCompanyId(companyName, client = db) {
+    const company = await getCompanyRow(companyName, client);
+    return company ? company.id : null;
+}
+
+async function saveUserAssignments(client, userId, assignments) {
+    const list = Array.isArray(assignments) ? assignments : Object.values(assignments || {});
+    await client.query('DELETE FROM central_user_departments WHERE user_id = ?', [userId]);
+    await client.query('DELETE FROM central_user_companies WHERE user_id = ?', [userId]);
+
+    const companyIds = new Set();
+    for (const [index, assignment] of list.entries()) {
+        const company = await getCompanyRow(assignment.name, client);
+        if (company && !companyIds.has(company.id)) {
+            companyIds.add(company.id);
+            await client.query(
+                'INSERT IGNORE INTO central_user_companies (id, user_id, company_id, is_primary) VALUES (UUID(), ?, ?, ?)',
+                [userId, company.id, index === 0 ? 1 : 0]
+            );
+        }
+
+        const deptId = await getDeptId(assignment.class || '', assignment.name, client);
+        if (deptId) {
+            await client.query(
+                'INSERT IGNORE INTO central_user_departments (id, user_id, department_id, is_primary) VALUES (UUID(), ?, ?, ?)',
+                [userId, deptId, index === 0 ? 1 : 0]
+            );
+        }
+    }
+}
+
+function sameCompanyName(a, b) {
+    if (!a || !b) return true;
+    return normalizeCompanyName(null, a).toUpperCase() === normalizeCompanyName(null, b).toUpperCase();
+}
+
+function isRequestInUserScope(request, user) {
+    if (user.role === 'administrator') return true;
+    return sameCompanyName(request.companyName, user.selectedCompany) && request.divisi === user.selectedDivision;
+}
+
+function isRpInUserScope(request, user, includeProcessDivision = false) {
+    if (user.role === 'administrator') return true;
+    if (!sameCompanyName(request.companyName, user.selectedCompany)) return false;
+    return request.divisi === user.selectedDivision || (includeProcessDivision && request.diprosesOleh === user.selectedDivision);
+}
+
+async function getAllEmployees() {
+    const [rows] = await db.query(USER_SQL + ' ORDER BY cu.name, cud.is_primary DESC, md.name');
+    return dbRowsToEmployees(rows);
+}
+
+async function getDeptCode(deptName, companyName) {
     const dept = (deptName || '').trim();
     if (!dept) return 'GEN';
-    const [rows] = await db.query(
-        'SELECT code FROM master_departments WHERE UPPER(name) = UPPER(?) OR UPPER(class) = UPPER(?) LIMIT 1',
-        [dept, dept]
-    );
+    const params = [dept, dept];
+    let sql = `
+        SELECT md.code
+        FROM master_departments md
+        LEFT JOIN master_companies mc ON md.company_id = mc.id
+        WHERE (UPPER(md.name) = UPPER(?) OR UPPER(md.class) = UPPER(?))
+    `;
+    if (companyName) {
+        sql += ' AND mc.code = ?';
+        params.push(normalizeCompanyCode(companyName));
+    }
+    sql += ' ORDER BY md.parent_id IS NOT NULL, md.id LIMIT 1';
+
+    const [rows] = await db.query(sql, params);
     if (rows.length && rows[0].code) return rows[0].code;
+    if (companyName) return getDeptCode(deptName);
     return dept.substring(0, 3).toUpperCase();
 }
 
-async function getJobLevelId(jobLevelName) {
+async function getJobLevelId(jobLevelName, client = db) {
     const mapped = { 'Komisaris': 'Commissioner', 'Direktur': 'President Director' };
     const search = mapped[jobLevelName] || jobLevelName;
-    const [rows] = await db.query('SELECT id FROM master_job_levels WHERE name = ? LIMIT 1', [search]);
+    const [rows] = await client.query('SELECT id FROM master_job_levels WHERE name = ? LIMIT 1', [search]);
     return rows.length ? rows[0].id : 8;
 }
 
-async function getDeptId(deptClass) {
-    const [rows] = await db.query(
-        'SELECT id FROM master_departments WHERE name = ? OR class = ? LIMIT 1',
-        [deptClass, deptClass]
-    );
-    return rows.length ? rows[0].id : null;
+async function getDeptId(deptClass, companyName, client = db) {
+    const dept = (deptClass || '').trim();
+    if (!dept) return null;
+    const params = [dept, dept];
+    let sql = `
+        SELECT md.id
+        FROM master_departments md
+        LEFT JOIN master_companies mc ON md.company_id = mc.id
+        WHERE (md.name = ? OR md.class = ?)
+    `;
+    if (companyName) {
+        sql += ' AND mc.code = ?';
+        params.push(normalizeCompanyCode(companyName));
+    }
+    sql += ' ORDER BY md.parent_id IS NOT NULL, md.id LIMIT 1';
+
+    const [rows] = await client.query(sql, params);
+    if (rows.length) return rows[0].id;
+    if (companyName) return getDeptId(deptClass, null, client);
+    return null;
+}
+
+async function getDepartmentCompanyId(companyName, client = db) {
+    return getCompanyId(companyName || COMPANY_MAP.PNM, client);
+}
+
+function userFromLoginRows(rows) {
+    return dbRowsToEmployees(rows)[0] || null;
+}
+
+function getPrimaryAssignment(assignments) {
+    const list = Array.isArray(assignments) ? assignments : Object.values(assignments || {});
+    return list[0] || {};
 }
 
 const renderAppShell = ({
@@ -269,7 +474,7 @@ app.post('/login', async (req, res) => {
             const row = rows[0];
             const match = await bcrypt.compare(password, row.password || '');
             if (match) {
-                const emp = dbRowToEmployee(row);
+                const emp = userFromLoginRows(rows);
                 req.session.user = { fullName: emp.fullName, role: emp.role, allAssignments: emp.companies };
                 return res.redirect('/select-company');
             }
@@ -286,7 +491,7 @@ app.post('/api/auth/login', async (req, res) => {
             const row = rows[0];
             const match = await bcrypt.compare(password, row.password || '');
             if (match) {
-                const emp = dbRowToEmployee(row);
+                const emp = userFromLoginRows(rows);
                 req.session.user = { fullName: emp.fullName, role: emp.role, allAssignments: emp.companies };
                 return res.json({ success: true, redirect: '/select-company' });
             }
@@ -299,26 +504,43 @@ app.get('/select-company', checkAuth, (req, res) => {
     const user = req.session.user;
     const companies = [...new Set(user.allAssignments.map(a => a.name))];
     if (companies.length === 1) {
+        const assignment = user.allAssignments.find(a => a.name === companies[0]);
         req.session.user.selectedCompany = companies[0];
+        req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || '';
+        req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || '';
         return res.redirect('/select-division');
     }
     sendSPA(res);
 });
 
 app.post('/select-company', checkAuth, (req, res) => {
+    const assignment = req.session.user.allAssignments.find(a => a.name === req.body.company);
     req.session.user.selectedCompany = req.body.company;
+    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || '';
+    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || '';
     res.redirect('/select-division');
 });
 
 app.get('/api/data/select-company', checkAuth, (req, res) => {
     const user = req.session.user;
     const companies = [...new Set(user.allAssignments.map(a => a.name))];
+    const companyOptions = companies.map(name => {
+        const assignment = user.allAssignments.find(a => a.name === name);
+        return {
+            id: assignment?.companyId || assignment?.id || '',
+            code: assignment?.companyCode || assignment?.code || '',
+            name
+        };
+    });
     res.json({
         companies,
+        companyOptions,
         user: {
             fullName: user.fullName,
             role: user.role,
             selectedCompany: user.selectedCompany || '',
+            selectedCompanyId: user.selectedCompanyId || '',
+            selectedCompanyCode: user.selectedCompanyCode || '',
             selectedDivision: user.selectedDivision || '',
             selectedJobLevel: user.selectedJobLevel || '',
             allAssignments: user.allAssignments || []
@@ -327,7 +549,10 @@ app.get('/api/data/select-company', checkAuth, (req, res) => {
 });
 
 app.post('/api/auth/select-company', checkAuth, (req, res) => {
+    const assignment = req.session.user.allAssignments.find(a => a.name === req.body.company);
     req.session.user.selectedCompany = req.body.company;
+    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || '';
+    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || '';
     res.json({ success: true, redirect: '/select-division' });
 });
 
@@ -362,10 +587,14 @@ app.get('/api/data/select-division', checkAuth, (req, res) => {
     res.json({
         divisions,
         selectedCompany: user.selectedCompany,
+        selectedCompanyId: user.selectedCompanyId || '',
+        selectedCompanyCode: user.selectedCompanyCode || '',
         user: {
             fullName: user.fullName,
             role: user.role,
             selectedCompany: user.selectedCompany || '',
+            selectedCompanyId: user.selectedCompanyId || '',
+            selectedCompanyCode: user.selectedCompanyCode || '',
             selectedDivision: user.selectedDivision || '',
             selectedJobLevel: user.selectedJobLevel || '',
             allAssignments: user.allAssignments || []
@@ -395,12 +624,12 @@ app.get('/frp', checkAuth, (req, res) => sendSPA(res));
 app.get('/api/form-data', checkAuth, async (req, res) => {
     try {
         const u = req.session.user;
-        const [employees, budgetsData, companiesData, vendorsData, deptRows] = await Promise.all([
+        const [employees, budgetsData, companiesData, vendorsData, departments] = await Promise.all([
             getAllEmployees(),
             Promise.resolve(readJson('budgets.json')),
-            Promise.resolve(readJson('companies.json')),
+            getCompanies(),
             Promise.resolve(readJson('vendors.json')),
-            db.query('SELECT id, name, class, code AS kodeFrp, company FROM master_departments ORDER BY name').then(([r]) => r),
+            getDepartmentRows(),
         ]);
         const requests = readJson('requests.json');
 
@@ -425,8 +654,7 @@ app.get('/api/form-data', checkAuth, async (req, res) => {
             editData = requests.find(r => r.id === req.query.revisi);
         }
 
-        const departments = deptRows.map(r => ({ id: r.id, name: r.name, class: r.class, kodeFrp: r.kodeFrp, company: r.company }));
-        const divisionList = [...new Set(deptRows.map(r => r.name))].sort();
+        const divisionList = [...new Set(departments.map(r => r.name))].sort();
 
         res.json({
             employees,
@@ -453,14 +681,15 @@ app.get('/api/employees/:department', checkAuth, async (req, res) => {
     try {
         const dept = req.params.department;
         const company = req.query.company;
-        const [rows] = await db.query(
-            USER_SQL + ' AND md.name = ? ORDER BY cu.name',
-            [dept]
-        );
-        let employees = rows.map(dbRowToEmployee);
+        const params = [dept];
+        let sql = USER_SQL + ' AND md.name = ?';
         if (company) {
-            employees = employees.filter(e => e.companies.some(c => c.name === company));
+            sql += ' AND mc.code = ?';
+            params.push(normalizeCompanyCode(company));
         }
+        sql += ' ORDER BY cu.name';
+        const [rows] = await db.query(sql, params);
+        const employees = dbRowsToEmployees(rows);
         res.json(employees);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -486,8 +715,10 @@ app.get('/api/budgets/:department', checkAuth, (req, res) => {
 
 app.get('/api/departments', checkAuth, async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT DISTINCT name FROM master_departments ORDER BY name');
-        res.json(rows.map(r => r.name));
+        const company = req.query.company;
+        const departments = await getDepartmentRows();
+        const filtered = company ? departments.filter(d => sameCompanyName(d.company, company)) : departments;
+        res.json([...new Set(filtered.map(r => r.name))].sort());
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -495,14 +726,15 @@ app.get('/api/managers/:department', checkAuth, async (req, res) => {
     try {
         const dept = req.params.department;
         const company = req.query.company;
-        const [rows] = await db.query(
-            USER_SQL + ' AND md.name = ? AND mjl.level >= 4 ORDER BY cu.name',
-            [dept]
-        );
-        let managers = rows.map(dbRowToEmployee);
+        const params = [dept];
+        let sql = USER_SQL + ' AND md.name = ? AND mjl.level >= 4';
         if (company) {
-            managers = managers.filter(e => e.companies.some(c => c.name === company));
+            sql += ' AND mc.code = ?';
+            params.push(normalizeCompanyCode(company));
         }
+        sql += ' ORDER BY cu.name';
+        const [rows] = await db.query(sql, params);
+        const managers = dbRowsToEmployees(rows);
         res.json(managers);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -577,7 +809,7 @@ app.get('/api/next-frp-number/:department', checkAuth, async (req, res) => {
     try {
         const requests = readJson('requests.json');
         const dept = (req.params.department || '').trim().toUpperCase();
-        const deptCode = await getDeptCode(dept);
+        const deptCode = await getDeptCode(dept, req.query.company || req.session.user.selectedCompany);
         const prefix = `FRP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
         const sequences = requests.filter(r => r.frpNo && r.frpNo.startsWith(prefix)).map(r => parseInt(r.frpNo.split('-').pop(), 10) || 0);
         const nextSeq = Math.max(0, ...sequences) + 1;
@@ -594,8 +826,8 @@ app.get('/api/data/approval', checkAuth, (req, res) => {
     const isApprovedView = req.query.view === 'approved';
     let reqs = readJson('requests.json');
 
-    const pendingCount = reqs.filter(r => r.status === 'PENDING' && (u.role === 'administrator' || r.divisi === u.selectedDivision)).length;
-    const approvedCount = reqs.filter(r => (r.status === 'APPROVED' || r.status === 'REJECTED') && (u.role === 'administrator' || r.divisi === u.selectedDivision)).length;
+    const pendingCount = reqs.filter(r => r.status === 'PENDING' && isRequestInUserScope(r, u)).length;
+    const approvedCount = reqs.filter(r => (r.status === 'APPROVED' || r.status === 'REJECTED') && isRequestInUserScope(r, u)).length;
 
     if (isApprovedView) {
         reqs = reqs.filter(r => r.status === 'APPROVED' || r.status === 'REJECTED');
@@ -604,7 +836,7 @@ app.get('/api/data/approval', checkAuth, (req, res) => {
     }
 
     if (u.role !== 'administrator') {
-        reqs = reqs.filter(r => r.divisi === u.selectedDivision);
+        reqs = reqs.filter(r => isRequestInUserScope(r, u));
     }
 
     const canApprove = u.role === 'administrator' || ['Manager', 'Direktur', 'Komisaris'].includes(u.selectedJobLevel);
@@ -632,9 +864,9 @@ app.get('/api/frp/:id', checkAuth, async (req, res) => {
         const isIT = user.role === 'administrator' || user.selectedDivision === 'IT';
         const canApprove = isIT || ['Manager', 'Direktur', 'Komisaris'].includes(user.selectedJobLevel);
         const canEdit = isIT;
-        const employees = await getAllEmployees();
+        const [employees, companies] = await Promise.all([getAllEmployees(), getCompanies()]);
 
-        res.json({ data, employees, companies: readJson('companies.json'), user, isIT, canApprove, canEdit });
+        res.json({ data, employees, companies, user, isIT, canApprove, canEdit });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -653,7 +885,7 @@ app.post('/api/frp/save', checkAuth, async (req, res) => {
         }
 
         const dept = (req.body.divisi || 'GENERAL').trim().toUpperCase();
-        const deptCode = await getDeptCode(dept);
+        const deptCode = await getDeptCode(dept, req.body.companyName || req.session.user.selectedCompany);
         const prefix = `FRP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
         const sequences = requests.filter(r => r.frpNo && r.frpNo.startsWith(prefix)).map(r => parseInt(r.frpNo.split('-').pop(), 10) || 0);
         const nextSeq = Math.max(0, ...sequences) + 1;
@@ -685,10 +917,14 @@ app.post('/api/frp/:id/:action', checkAuth, async (req, res) => {
             requests[idx].status = 'APPROVED';
             requests[idx].approvedByActual = req.session.user.fullName;
             const divisi = requests[idx].divisi || '';
-            const [mgrRows] = await db.query(
-                USER_SQL + ' AND md.name = ? AND mjl.level >= 4 ORDER BY mjl.level DESC LIMIT 1',
-                [divisi]
-            );
+            const params = [divisi];
+            let sql = USER_SQL + ' AND md.name = ? AND mjl.level >= 4';
+            if (requests[idx].companyName) {
+                sql += ' AND mc.code = ?';
+                params.push(normalizeCompanyCode(requests[idx].companyName));
+            }
+            sql += ' ORDER BY mjl.level DESC LIMIT 1';
+            const [mgrRows] = await db.query(sql, params);
             requests[idx].approvedBy = mgrRows.length ? mgrRows[0].name : req.session.user.fullName;
             requests[idx].approvedAt = new Date().toISOString();
         } else if (action === 'reject') {
@@ -1006,16 +1242,16 @@ app.get('/api/data/admin', checkAuth, checkIT, async (req, res) => {
         if (type === 'employees') {
             listData = await getAllEmployees();
         } else if (type === 'departments') {
-            const [rows] = await db.query('SELECT id, name, class, code AS kodeFrp, company FROM master_departments ORDER BY name');
-            listData = rows.map((r, i) => ({ ...r, originalIndex: r.id }));
+            listData = await getDepartmentRows();
         } else {
             listData = readJson(`${type}.json`).map((item, index) => ({ ...item, originalIndex: index }));
         }
-        const employeeList = await getAllEmployees();
+        const [employeeList, companies] = await Promise.all([getAllEmployees(), getCompanies()]);
         res.json({
             activeType: type,
             listData,
             employeeList,
+            companies,
             user: { fullName: u.fullName, role: u.role, selectedJobLevel: u.selectedJobLevel, allAssignments: u.allAssignments || [] }
         });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1026,24 +1262,36 @@ app.post('/api/admin/:type/add', checkAuth, checkIT, async (req, res) => {
     try {
         if (type === 'employees') {
             const { fullName, email, companies = [] } = req.body;
-            const assignment = Array.isArray(companies) ? companies[0] : (companies['0'] || {});
-            const deptId = await getDeptId(assignment.class || '');
-            const jobLevelId = await getJobLevelId(assignment.jobLevel || 'Staff');
+            const assignment = getPrimaryAssignment(companies);
             const username = (fullName || '').toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
             const passwordHash = bcrypt.hashSync('12345', 10);
-            await db.query(
-                'INSERT INTO central_users (id, name, email, username, password, department_id, job_level_id, is_active) VALUES (UUID(), ?, ?, ?, ?, ?, ?, 1)',
-                [fullName, email || null, username, passwordHash, deptId, jobLevelId]
-            );
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                const [[{ id: userId }]] = await conn.query('SELECT UUID() AS id');
+                const jobLevelId = await getJobLevelId(assignment.jobLevel || 'Staff', conn);
+                await conn.query(
+                    'INSERT INTO central_users (id, name, email, username, password, job_level_id, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)',
+                    [userId, fullName, email || null, username, passwordHash, jobLevelId]
+                );
+                await saveUserAssignments(conn, userId, companies);
+                await conn.commit();
+            } catch (e) {
+                await conn.rollback();
+                throw e;
+            } finally {
+                conn.release();
+            }
             return res.json({ success: true });
         }
         if (type === 'departments') {
             const { name, class: cls, kodeFrp, company } = req.body;
             const [existing] = await db.query('SELECT MAX(id) AS maxId FROM master_departments');
             const nextId = (existing[0].maxId || 0) + 1;
+            const companyId = await getDepartmentCompanyId(company);
             await db.query(
-                'INSERT INTO master_departments (id, name, class, code, company) VALUES (?, ?, ?, ?, ?)',
-                [nextId, name, cls || name, kodeFrp || '', company || 'PNM']
+                'INSERT INTO master_departments (id, name, class, code, company_id) VALUES (?, ?, ?, ?, ?)',
+                [nextId, name, cls || name, kodeFrp || '', companyId]
             );
             return res.json({ success: true });
         }
@@ -1082,20 +1330,31 @@ app.post('/api/admin/:type/edit/:index', checkAuth, checkIT, async (req, res) =>
     try {
         if (type === 'employees') {
             const { fullName, email, companies = [] } = req.body;
-            const assignment = Array.isArray(companies) ? companies[0] : (companies['0'] || {});
-            const deptId = await getDeptId(assignment.class || '');
-            const jobLevelId = await getJobLevelId(assignment.jobLevel || 'Staff');
-            await db.query(
-                'UPDATE central_users SET name = ?, email = ?, department_id = ?, job_level_id = ? WHERE id = ?',
-                [fullName, email || null, deptId, jobLevelId, index]
-            );
+            const assignment = getPrimaryAssignment(companies);
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                const jobLevelId = await getJobLevelId(assignment.jobLevel || 'Staff', conn);
+                await conn.query(
+                    'UPDATE central_users SET name = ?, email = ?, job_level_id = ? WHERE id = ?',
+                    [fullName, email || null, jobLevelId, index]
+                );
+                await saveUserAssignments(conn, index, companies);
+                await conn.commit();
+            } catch (e) {
+                await conn.rollback();
+                throw e;
+            } finally {
+                conn.release();
+            }
             return res.json({ success: true });
         }
         if (type === 'departments') {
             const { name, class: cls, kodeFrp, company } = req.body;
+            const companyId = await getDepartmentCompanyId(company);
             await db.query(
-                'UPDATE master_departments SET name = ?, class = ?, code = ?, company = ? WHERE id = ?',
-                [name, cls || name, kodeFrp || '', company || 'PNM', parseInt(index, 10)]
+                'UPDATE master_departments SET name = ?, class = ?, code = ?, company_id = ? WHERE id = ?',
+                [name, cls || name, kodeFrp || '', companyId, parseInt(index, 10)]
             );
             return res.json({ success: true });
         }
@@ -1136,11 +1395,11 @@ app.get('/rp/:id', checkAuth, (req, res) => sendSPA(res));
 app.get('/api/rp/form-data', checkAuth, async (req, res) => {
     try {
         const u = req.session.user;
-        const [employees, deptRows] = await Promise.all([
+        const [employees, departmentsData, companiesData] = await Promise.all([
             getAllEmployees(),
-            db.query('SELECT id, name, class, code AS kodeFrp, company FROM master_departments ORDER BY name').then(([r]) => r),
+            getDepartmentRows(),
+            getCompanies(),
         ]);
-        const departmentsData = deptRows.map(r => ({ ...r, originalIndex: r.id }));
         const processDivisions = [...new Set(departmentsData.map(d => d.name).filter(Boolean))].sort();
 
         const budgetsData = readJson('budgets.json');
@@ -1183,6 +1442,7 @@ app.get('/api/rp/form-data', checkAuth, async (req, res) => {
         res.json({
             employees,
             budgets: budgetsWithRemaining,
+            companies: companiesData,
             vendors: vendorsData,
             departments: departmentsData,
             processDivisions,
@@ -1203,7 +1463,7 @@ app.get('/api/rp/next-number/:department', checkAuth, async (req, res) => {
     try {
         const rpRequests = readJson('rp-requests.json');
         const dept = (req.params.department || '').trim().toUpperCase();
-        const deptCode = await getDeptCode(dept);
+        const deptCode = await getDeptCode(dept, req.query.company || req.session.user.selectedCompany);
         const prefix = `RP-${deptCode}-${new Date().getFullYear().toString().slice(-2)}-`;
         const sequences = rpRequests.filter(r => r.rpNo && r.rpNo.startsWith(prefix)).map(r => parseInt(r.rpNo.split('-').pop(), 10) || 0);
         const nextSeq = Math.max(0, ...sequences) + 1;
@@ -1259,31 +1519,35 @@ app.get('/api/data/rp-approval', checkAuth, (req, res) => {
     let reqs = readJson('rp-requests.json');
 
     const isProductUser = u.selectedDivision && ['product', 'produk'].includes(u.selectedDivision.toLowerCase());
+    const isApprovedScope = r => u.role === 'administrator' || (
+        sameCompanyName(r.companyName, u.selectedCompany) &&
+        (isProductUser || r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision)
+    );
 
-    const pendingCount = reqs.filter(r => r.status === 'PENDING_MANAGER' && (u.role === 'administrator' || r.divisi === u.selectedDivision)).length;
-    const processCount = reqs.filter(r => r.status === 'PENDING_PROCESS' && (u.role === 'administrator' || r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision)).length;
-    const processApprovalCount = reqs.filter(r => r.status === 'PENDING_PROCESS_APPROVAL' && (u.role === 'administrator' || r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision)).length;
-    const approvedCount = reqs.filter(r => (r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CREATED_FRP') && (u.role === 'administrator' || isProductUser || r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision)).length;
+    const pendingCount = reqs.filter(r => r.status === 'PENDING_MANAGER' && isRpInUserScope(r, u)).length;
+    const processCount = reqs.filter(r => r.status === 'PENDING_PROCESS' && isRpInUserScope(r, u, true)).length;
+    const processApprovalCount = reqs.filter(r => r.status === 'PENDING_PROCESS_APPROVAL' && isRpInUserScope(r, u, true)).length;
+    const approvedCount = reqs.filter(r => (r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CREATED_FRP') && isApprovedScope(r)).length;
 
     if (view === 'approved') {
         reqs = reqs.filter(r => r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CREATED_FRP');
-        if (u.role !== 'administrator' && !isProductUser) {
-            reqs = reqs.filter(r => r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision);
+        if (u.role !== 'administrator') {
+            reqs = reqs.filter(r => isApprovedScope(r));
         }
     } else if (view === 'process') {
         reqs = reqs.filter(r => r.status === 'PENDING_PROCESS');
         if (u.role !== 'administrator') {
-            reqs = reqs.filter(r => r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision);
+            reqs = reqs.filter(r => isRpInUserScope(r, u, true));
         }
     } else if (view === 'process-approval') {
         reqs = reqs.filter(r => r.status === 'PENDING_PROCESS_APPROVAL');
         if (u.role !== 'administrator') {
-            reqs = reqs.filter(r => r.diprosesOleh === u.selectedDivision || r.divisi === u.selectedDivision);
+            reqs = reqs.filter(r => isRpInUserScope(r, u, true));
         }
     } else {
         reqs = reqs.filter(r => r.status === 'PENDING_MANAGER');
         if (u.role !== 'administrator') {
-            reqs = reqs.filter(r => r.divisi === u.selectedDivision);
+            reqs = reqs.filter(r => isRpInUserScope(r, u));
         }
     }
 
@@ -1335,6 +1599,10 @@ app.post('/api/rp/:id/:action', checkAuth, (req, res) => {
     const rp = rpRequests[idx];
     const u = req.session.user;
     const isAdmin = u.role === 'administrator';
+
+    if (!isAdmin && !sameCompanyName(rp.companyName, u.selectedCompany)) {
+        return res.json({ success: false, error: 'Anda hanya dapat memproses data dari perusahaan yang sedang dipilih' });
+    }
 
     if (action === 'manager-approve' || action === 'manager-reject') {
         if (!isAdmin) {

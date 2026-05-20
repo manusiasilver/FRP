@@ -21,7 +21,7 @@ const blankAssignment = () => ({ name: COMPANIES[0], class: '', jobLevel: 'Staff
 function getBlankForm(type) {
   if (type === 'employees') return { fullName: '', email: '', companies: [blankAssignment()] }
   if (type === 'vendors') return { name: '', bank: '', account: '' }
-  if (type === 'departments') return { name: '', class: '', kodeFrp: '', manager: '' }
+  if (type === 'departments') return { name: '', class: '', kodeFrp: '', company: COMPANIES[0], manager: '' }
   if (type === 'budgets') return { id: '', department: '', company: COMPANIES[0], class: '', type: '', description: '', totalAmount: '' }
   if (type === 'roles') return { role: '', description: '' }
   return {}
@@ -332,8 +332,8 @@ function SectionHeading({ icon, title, subtitle, accent }) {
   )
 }
 
-function EmployeeFormFields({ form, onChange, onAssignmentsChange, styles }) {
-  const addAssignment = () => onAssignmentsChange([...form.companies, blankAssignment()])
+function EmployeeFormFields({ form, onChange, onAssignmentsChange, companyNames, styles }) {
+  const addAssignment = () => onAssignmentsChange([...form.companies, { name: companyNames[0] || COMPANIES[0], class: '', jobLevel: 'Staff' }])
   const removeAssignment = idx => onAssignmentsChange(form.companies.filter((_, i) => i !== idx))
   const updateAssignment = (idx, field, val) => onAssignmentsChange(form.companies.map((a, i) => i === idx ? { ...a, [field]: val } : a))
 
@@ -357,7 +357,7 @@ function EmployeeFormFields({ form, onChange, onAssignmentsChange, styles }) {
               <div style={styles.formGroup}>
                 <label style={styles.label}>Company</label>
                 <select style={styles.select} value={assignment.name} onChange={e => updateAssignment(idx, 'name', e.target.value)}>
-                  {COMPANIES.map(company => <option key={company} value={company}>{company}</option>)}
+                  {companyNames.map(company => <option key={company} value={company}>{company}</option>)}
                 </select>
               </div>
               <div style={styles.formGroup}>
@@ -406,10 +406,10 @@ function VendorFormFields({ form, onChange, styles }) {
   )
 }
 
-function DepartmentFormFields({ form, onChange, employeeList, styles }) {
+function DepartmentFormFields({ form, onChange, employeeList, companyNames, styles }) {
   return (
     <>
-      <div style={styles.grid2}>
+      <div style={styles.grid3}>
         <div style={styles.formGroup}>
           <label style={styles.label}>Nama Department</label>
           <input style={styles.input} required value={form.name} onChange={e => onChange('name', e.target.value)} placeholder="FINANCE & ACCOUNTING" />
@@ -417,6 +417,12 @@ function DepartmentFormFields({ form, onChange, employeeList, styles }) {
         <div style={styles.formGroup}>
           <label style={styles.label}>Class</label>
           <input style={styles.input} required value={form.class} onChange={e => onChange('class', e.target.value)} placeholder="FINANCE" />
+        </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Company</label>
+          <select style={styles.select} required value={form.company || companyNames[0] || COMPANIES[0]} onChange={e => onChange('company', e.target.value)}>
+            {companyNames.map(company => <option key={company} value={company}>{company}</option>)}
+          </select>
         </div>
       </div>
       <div style={styles.grid2}>
@@ -439,7 +445,7 @@ function DepartmentFormFields({ form, onChange, employeeList, styles }) {
   )
 }
 
-function BudgetFormFields({ form, onChange, styles }) {
+function BudgetFormFields({ form, onChange, companyNames, styles }) {
   return (
     <>
       <div style={styles.grid3}>
@@ -454,7 +460,7 @@ function BudgetFormFields({ form, onChange, styles }) {
         <div style={styles.formGroup}>
           <label style={styles.label}>Company</label>
           <select style={styles.select} required value={form.company} onChange={e => onChange('company', e.target.value)}>
-            {COMPANIES.map(company => <option key={company} value={company}>{company}</option>)}
+            {companyNames.map(company => <option key={company} value={company}>{company}</option>)}
           </select>
         </div>
       </div>
@@ -497,11 +503,11 @@ function RoleFormFields({ form, onChange, styles }) {
   )
 }
 
-function FormFields({ type, form, onChange, onAssignmentsChange, employeeList, styles }) {
-  if (type === 'employees') return <EmployeeFormFields form={form} onChange={onChange} onAssignmentsChange={onAssignmentsChange} styles={styles} />
+function FormFields({ type, form, onChange, onAssignmentsChange, employeeList, companyNames = COMPANIES, styles }) {
+  if (type === 'employees') return <EmployeeFormFields form={form} onChange={onChange} onAssignmentsChange={onAssignmentsChange} companyNames={companyNames} styles={styles} />
   if (type === 'vendors') return <VendorFormFields form={form} onChange={onChange} styles={styles} />
-  if (type === 'departments') return <DepartmentFormFields form={form} onChange={onChange} employeeList={employeeList} styles={styles} />
-  if (type === 'budgets') return <BudgetFormFields form={form} onChange={onChange} styles={styles} />
+  if (type === 'departments') return <DepartmentFormFields form={form} onChange={onChange} employeeList={employeeList} companyNames={companyNames} styles={styles} />
+  if (type === 'budgets') return <BudgetFormFields form={form} onChange={onChange} companyNames={companyNames} styles={styles} />
   if (type === 'roles') return <RoleFormFields form={form} onChange={onChange} styles={styles} />
   return null
 }
@@ -520,11 +526,13 @@ function renderCompanies(item, styles) {
   )
 }
 
-function TableRows({ type, listData, onEdit, onDelete, companyFilter, styles }) {
+function TableRows({ type, listData, onEdit, onDelete, companyFilter, companyNames = COMPANIES, styles }) {
+  const defaultCompany = companyNames[0] || COMPANIES[0]
   const filtered = companyFilter
     ? listData.filter(item => {
         if (type === 'employees') return item.companies?.some(c => c.name === companyFilter) || item.company === companyFilter
-        if (type === 'budgets') return (item.company || COMPANIES[0]) === companyFilter
+        if (type === 'departments') return (item.company || defaultCompany) === companyFilter
+        if (type === 'budgets') return (item.company || defaultCompany) === companyFilter
         return true
       })
     : listData
@@ -559,13 +567,14 @@ function TableRows({ type, listData, onEdit, onDelete, companyFilter, styles }) 
       </>}
       {type === 'departments' && <>
         <td style={styles.td}><strong style={{ color: '#1e293b' }}>{item.name}</strong></td>
+        <td style={{ ...styles.td, fontSize: '0.82rem', fontWeight: 700 }}>{item.company || defaultCompany}</td>
         <td style={styles.td}><span style={{ ...styles.badge, ...styles.badgeClass }}>{item.class}</span></td>
         <td style={styles.td}><span style={{ ...styles.badge, ...styles.badgeCode }}>{item.kodeFrp}</span></td>
         <td style={styles.td}>{item.manager}</td>
       </>}
       {type === 'budgets' && <>
         <td style={styles.td}><strong style={{ color: '#1e293b' }}>{item.id}</strong></td>
-        <td style={{ ...styles.td, fontSize: '0.82rem', fontWeight: 700 }}>{item.company || COMPANIES[0]}</td>
+        <td style={{ ...styles.td, fontSize: '0.82rem', fontWeight: 700 }}>{item.company || defaultCompany}</td>
         <td style={styles.td}><span style={{ ...styles.badge, ...styles.badgeSoft }}>{item.department}</span></td>
         <td style={styles.td}>{item.class}</td>
         <td style={styles.td}><span style={{ ...styles.badge, ...styles.badgeCode }}>{item.type}</span></td>
@@ -586,11 +595,13 @@ function TableRows({ type, listData, onEdit, onDelete, companyFilter, styles }) 
   ))
 }
 
-function MobileList({ type, listData, onEdit, onDelete, companyFilter, styles }) {
+function MobileList({ type, listData, onEdit, onDelete, companyFilter, companyNames = COMPANIES, styles }) {
+  const defaultCompany = companyNames[0] || COMPANIES[0]
   const filtered = companyFilter
     ? listData.filter(item => {
         if (type === 'employees') return item.companies?.some(c => c.name === companyFilter) || item.company === companyFilter
-        if (type === 'budgets') return (item.company || COMPANIES[0]) === companyFilter
+        if (type === 'departments') return (item.company || defaultCompany) === companyFilter
+        if (type === 'budgets') return (item.company || defaultCompany) === companyFilter
         return true
       })
     : listData
@@ -613,6 +624,7 @@ function MobileList({ type, listData, onEdit, onDelete, companyFilter, styles })
           </>}
           {type === 'departments' && <>
             <div style={{ fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>{item.name}</div>
+            <div style={{ marginTop: '4px', color: '#64748b', fontSize: '0.84rem' }}>{item.company || defaultCompany}</div>
             <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <span style={{ ...styles.badge, ...styles.badgeClass }}>{item.class}</span>
               <span style={{ ...styles.badge, ...styles.badgeCode }}>{item.kodeFrp}</span>
@@ -620,7 +632,7 @@ function MobileList({ type, listData, onEdit, onDelete, companyFilter, styles })
           </>}
           {type === 'budgets' && <>
             <div style={{ fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>{item.id}</div>
-            <div style={{ marginTop: '4px', color: '#64748b', fontSize: '0.84rem' }}>{item.company || COMPANIES[0]}</div>
+            <div style={{ marginTop: '4px', color: '#64748b', fontSize: '0.84rem' }}>{item.company || defaultCompany}</div>
           </>}
           {type === 'roles' && <>
             <div style={{ fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>{item.role}</div>
@@ -683,7 +695,7 @@ function TableHeadRow({ type, styles }) {
   const cols = {
     employees: ['No', 'Nama Lengkap', 'Email', 'Company', 'Divisi', 'Jabatan', 'Role', 'Aksi'],
     vendors: ['No', 'Nama Vendor', 'Bank', 'No Rekening', 'Aksi'],
-    departments: ['No', 'Nama Dept', 'Class', 'Kode FRP', 'Manager', 'Aksi'],
+    departments: ['No', 'Nama Dept', 'Company', 'Class', 'Kode FRP', 'Manager', 'Aksi'],
     budgets: ['No', 'Budget ID', 'Company', 'Dept', 'Class', 'Type', 'Deskripsi', 'Total Amount', 'Aksi'],
     roles: ['No', 'Role', 'Deskripsi', 'Aksi'],
   }
@@ -783,15 +795,21 @@ export default function AdminPage() {
     }
   }
 
-  const showFilter = type === 'budgets' || type === 'employees'
+  const showFilter = type === 'budgets' || type === 'employees' || type === 'departments'
   const user = data?.user || {}
   const listData = data?.listData || []
+  const companyNames = useMemo(() => {
+    const names = (data?.companies || []).map(company => company.name || company).filter(Boolean)
+    return names.length ? names : COMPANIES
+  }, [data?.companies])
+  const defaultCompany = companyNames[0] || COMPANIES[0]
   const filteredCount = useMemo(() => {
     if (!companyFilter) return listData.length
     if (type === 'employees') return listData.filter(item => item.companies?.some(c => c.name === companyFilter) || item.company === companyFilter).length
-    if (type === 'budgets') return listData.filter(item => (item.company || COMPANIES[0]) === companyFilter).length
+    if (type === 'departments') return listData.filter(item => (item.company || defaultCompany) === companyFilter).length
+    if (type === 'budgets') return listData.filter(item => (item.company || defaultCompany) === companyFilter).length
     return listData.length
-  }, [companyFilter, listData, type])
+  }, [companyFilter, defaultCompany, listData, type])
 
   return (
     <>
@@ -802,7 +820,7 @@ export default function AdminPage() {
               <section style={styles.card}>
                 <SectionHeading icon="add_circle" title={`Tambah ${meta.noun} Baru`} subtitle={`Form input ${meta.noun.toLowerCase()} mengikuti gaya halaman Form dan Approved agar lebih konsisten.`} accent={meta.accent} />
                 <form onSubmit={handleAdd}>
-                  <FormFields type={type} form={addForm} onChange={updateAddForm} onAssignmentsChange={updateAddAssignments} employeeList={data?.employeeList} styles={styles} />
+                  <FormFields type={type} form={addForm} onChange={updateAddForm} onAssignmentsChange={updateAddAssignments} employeeList={data?.employeeList} companyNames={companyNames} styles={styles} />
                   <div style={{ display: 'flex', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
                     <button type="submit" style={{ ...styles.btnPrimary, width: isMobile ? '100%' : 'auto', opacity: saving ? 0.7 : 1 }} disabled={saving}>
                       <span className="material-icons-round" style={{ fontSize: '18px' }}>save</span>
@@ -824,7 +842,7 @@ export default function AdminPage() {
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '6px', letterSpacing: '0.05em' }}>Filter PT</label>
                         <select value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} style={styles.select}>
                           <option value="">Semua Perusahaan</option>
-                          {COMPANIES.map(company => <option key={company} value={company}>{company}</option>)}
+                          {companyNames.map(company => <option key={company} value={company}>{company}</option>)}
                         </select>
                       </div>
                     </div>
@@ -832,13 +850,13 @@ export default function AdminPage() {
                 </div>
 
                 {isMobile ? (
-                  <MobileList type={type} listData={listData} onEdit={handleEdit} onDelete={handleDelete} companyFilter={companyFilter} styles={styles} />
+                  <MobileList type={type} listData={listData} onEdit={handleEdit} onDelete={handleDelete} companyFilter={companyFilter} companyNames={companyNames} styles={styles} />
                 ) : (
                   <div style={styles.tableWrap}>
                     <table style={styles.table}>
                       <TableHeadRow type={type} styles={styles} />
                       <tbody>
-                        <TableRows type={type} listData={listData} onEdit={handleEdit} onDelete={handleDelete} companyFilter={companyFilter} styles={styles} />
+                        <TableRows type={type} listData={listData} onEdit={handleEdit} onDelete={handleDelete} companyFilter={companyFilter} companyNames={companyNames} styles={styles} />
                       </tbody>
                     </table>
                   </div>
@@ -861,7 +879,7 @@ export default function AdminPage() {
               <button style={styles.closeBtn} onClick={() => setEditItem(null)}><span className="material-icons-round">close</span></button>
             </div>
             <form onSubmit={handleEditSave}>
-              <FormFields type={type} form={editItem} onChange={updateEditForm} onAssignmentsChange={updateEditAssignments} employeeList={data?.employeeList} styles={styles} />
+              <FormFields type={type} form={editItem} onChange={updateEditForm} onAssignmentsChange={updateEditAssignments} employeeList={data?.employeeList} companyNames={companyNames} styles={styles} />
               <button type="submit" style={{ ...styles.btnPrimary, width: '100%', marginTop: '0.75rem', opacity: saving ? 0.7 : 1 }} disabled={saving}>
                 <span className="material-icons-round" style={{ fontSize: '18px' }}>save</span>
                 {saving ? 'Menyimpan...' : 'Simpan Perubahan'}

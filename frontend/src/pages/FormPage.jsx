@@ -20,6 +20,8 @@ const formatNumberInput = v => {
   return new Intl.NumberFormat('en-US').format(parseInt(clean, 10))
 }
 
+const normalizeCompany = v => String(v || '').trim().toUpperCase()
+
 const getEmployeeAssignments = e => {
   if (Array.isArray(e?.companies) && e.companies.length > 0) return e.companies
   if (e?.class) return [{ name: e.company || '', class: e.class, jobLevel: e.jobLevel || '' }]
@@ -29,8 +31,15 @@ const getEmployeeAssignments = e => {
 const buildDepartments = (employees, companyName) =>
   [...new Set((employees || [])
     .flatMap(e => getEmployeeAssignments(e))
-    .filter(a => !companyName || a.name === companyName)
+    .filter(a => !companyName || normalizeCompany(a.name) === normalizeCompany(companyName))
     .map(a => a.class || '')
+    .filter(Boolean))]
+    .sort()
+
+const buildDepartmentsFromMaster = (departments, companyName) =>
+  [...new Set((departments || [])
+    .filter(d => !companyName || normalizeCompany(d.company) === normalizeCompany(companyName))
+    .map(d => d.name || '')
     .filter(Boolean))]
     .sort()
 
@@ -683,8 +692,10 @@ export default function FormPage() {
   const isTablet = viewportWidth >= MOBILE_BREAKPOINT && viewportWidth < TABLET_BREAKPOINT
 
   const departments = useMemo(
-    () => FRP.divisionList || buildDepartments(FRP.employees || [], values.companyName),
-    [FRP.divisionList, FRP.employees, values.companyName],
+    () => (FRP.departments?.length
+      ? buildDepartmentsFromMaster(FRP.departments, values.companyName)
+      : (FRP.divisionList || buildDepartments(FRP.employees || [], values.companyName))),
+    [FRP.departments, FRP.divisionList, FRP.employees, values.companyName],
   )
 
   const filteredEmployees = useMemo(() => {

@@ -8,6 +8,7 @@ const TABLET_BREAKPOINT = 1100
 const normalizeNumber = v => { const n = Number(String(v).replace(/[^0-9.-]/g, '')); return Number.isNaN(n) ? 0 : n }
 const formatCurrency = v => new Intl.NumberFormat('id-ID').format(normalizeNumber(v))
 const formatNumberInput = v => { if (!v && v !== 0) return ''; const c = String(v).replace(/\D/g, ''); return c ? new Intl.NumberFormat('en-US').format(parseInt(c, 10)) : '' }
+const normalizeCompany = v => String(v || '').trim().toUpperCase()
 
 const getGridColumns = (desktopColumns, isMobile, isTablet) => {
   if (isMobile) return '1fr'
@@ -279,11 +280,18 @@ export default function RpFormPage() {
   const resetValues = () => setValues(buildInitialRp(D))
 
   const departments = useMemo(() => {
+    if (D.departments && D.departments.length > 0) {
+      return [...new Set(D.departments
+        .filter(d => !values.companyName || normalizeCompany(d.company) === normalizeCompany(values.companyName))
+        .map(d => d.name)
+        .filter(Boolean))]
+        .sort()
+    }
     if (D.processDivisions && D.processDivisions.length > 0) return D.processDivisions
     const emps = D.employees || []
-    const divs = [...new Set(emps.flatMap(e => (e.companies || []).filter(a => !values.companyName || a.name === values.companyName).map(a => a.class)).filter(Boolean))]
+    const divs = [...new Set(emps.flatMap(e => (e.companies || []).filter(a => !values.companyName || normalizeCompany(a.name) === normalizeCompany(values.companyName)).map(a => a.class)).filter(Boolean))]
     return divs.sort()
-  }, [D.processDivisions, D.employees, values.companyName])
+  }, [D.departments, D.processDivisions, D.employees, values.companyName])
 
   const classOptions = useMemo(() => {
     const budgets = D.budgets || []
@@ -300,10 +308,14 @@ export default function RpFormPage() {
     })
   }, [D.budgets, values.divisi, values.companyName])
 
-  const processDivOptions = useMemo(
-    () => (D.processDivisions || ['IT', 'HCGA', 'Product']).map(d => ({ value: d, label: d })),
-    [D.processDivisions]
-  )
+  const processDivOptions = useMemo(() => {
+    const source = D.departments?.length
+      ? D.departments
+        .filter(d => !values.companyName || normalizeCompany(d.company) === normalizeCompany(values.companyName))
+        .map(d => d.name)
+      : (D.processDivisions || ['IT', 'HCGA', 'Product'])
+    return [...new Set(source.filter(Boolean))].sort().map(d => ({ value: d, label: d }))
+  }, [D.departments, D.processDivisions, values.companyName])
   const companyOptions = useMemo(() => {
     const names = [
       ...(D.companies || []).map(company => company.name || company),
