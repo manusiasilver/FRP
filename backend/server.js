@@ -716,9 +716,27 @@ app.get('/api/budgets/:department', checkAuth, (req, res) => {
 app.get('/api/departments', checkAuth, async (req, res) => {
     try {
         const company = req.query.company;
+        const full = req.query.full === '1';
         const departments = await getDepartmentRows();
         const filtered = company ? departments.filter(d => sameCompanyName(d.company, company)) : departments;
+        if (full) {
+            // Return full objects for dropdowns
+            const seen = new Set();
+            const result = [];
+            for (const d of filtered) {
+                const key = `${d.class}||${d.name}`;
+                if (!seen.has(key)) { seen.add(key); result.push({ name: d.name, class: d.class, code: d.kodeFrp }); }
+            }
+            return res.json(result.sort((a, b) => a.name.localeCompare(b.name)));
+        }
         res.json([...new Set(filtered.map(r => r.name))].sort());
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/job-levels', checkAuth, async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT id, name, level FROM master_job_levels ORDER BY level ASC');
+        res.json(rows.map(r => ({ id: r.id, name: r.name, level: r.level })));
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

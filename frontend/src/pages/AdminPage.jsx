@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 
@@ -332,6 +332,107 @@ function SectionHeading({ icon, title, subtitle, accent }) {
   )
 }
 
+function AssignmentRow({ idx, assignment, companyNames, onUpdate, onRemove, canRemove, styles }) {
+  const [deptOptions, setDeptOptions] = useState([])
+  const [jobLevels, setJobLevels] = useState(JOB_LEVELS.map(j => ({ name: j })))
+  const [loadingDepts, setLoadingDepts] = useState(false)
+
+  useEffect(() => {
+    if (!assignment.name) return
+    setLoadingDepts(true)
+    fetch(`/api/departments?company=${encodeURIComponent(assignment.name)}&full=1`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setDeptOptions(Array.isArray(data) ? data : []) })
+      .catch(() => setDeptOptions([]))
+      .finally(() => setLoadingDepts(false))
+  }, [assignment.name])
+
+  useEffect(() => {
+    fetch('/api/job-levels')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (Array.isArray(data) && data.length) setJobLevels(data) })
+      .catch(() => {})
+  }, [])
+
+  const handleCompanyChange = val => {
+    onUpdate(idx, 'name', val)
+    onUpdate(idx, 'class', '')
+  }
+
+  const classMatchesDept = deptOptions.some(d => d.class === assignment.class || d.name === assignment.class)
+
+  return (
+    <div style={{ ...styles.assignCard, position: 'relative', paddingTop: '1.5rem' }}>
+      <div style={{ position: 'absolute', top: '-10px', left: '14px', background: '#2563eb', color: 'white', borderRadius: '999px', padding: '2px 10px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em' }}>
+        Assignment {idx + 1}
+      </div>
+      <div style={styles.formGroup}>
+        <label style={styles.label}>Perusahaan</label>
+        <select style={styles.select} value={assignment.name} onChange={e => handleCompanyChange(e.target.value)}>
+          {companyNames.map(company => <option key={company} value={company}>{company}</option>)}
+        </select>
+      </div>
+      <div style={styles.grid2}>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Divisi / Departemen</label>
+          {loadingDepts ? (
+            <div style={{ ...styles.input, color: '#94a3b8' }}>Memuat divisi...</div>
+          ) : (
+            <select
+              style={{ ...styles.select, borderColor: assignment.class && !classMatchesDept ? '#f59e0b' : '#d7e0ea' }}
+              value={assignment.class}
+              onChange={e => onUpdate(idx, 'class', e.target.value)}
+            >
+              <option value="">— Pilih Divisi —</option>
+              {deptOptions.map(d => (
+                <option key={`${d.class}-${d.name}`} value={d.class}>
+                  {d.name}{d.class && d.class !== d.name ? ` (${d.class})` : ''}
+                </option>
+              ))}
+              {assignment.class && !classMatchesDept && (
+                <option value={assignment.class}>{assignment.class} ⚠</option>
+              )}
+            </select>
+          )}
+          {deptOptions.length === 0 && !loadingDepts && assignment.name && (
+            <span style={{ fontSize: '11px', color: '#f59e0b' }}>⚠ Belum ada divisi terdaftar</span>
+          )}
+        </div>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Jabatan / Job Level</label>
+          <select style={styles.select} value={assignment.jobLevel} onChange={e => onUpdate(idx, 'jobLevel', e.target.value)}>
+            {jobLevels.map(level => (
+              <option key={level.name || level} value={level.name || level}>{level.name || level}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {(assignment.class || assignment.jobLevel) && (
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+          {assignment.class && (
+            <span style={{ ...styles.badge, ...styles.badgeClass }}>
+              <span className="material-icons-round" style={{ fontSize: '11px', marginRight: '3px' }}>domain</span>
+              {assignment.class}
+            </span>
+          )}
+          {assignment.jobLevel && (
+            <span style={{ ...styles.badge, background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+              <span className="material-icons-round" style={{ fontSize: '11px', marginRight: '3px' }}>badge</span>
+              {assignment.jobLevel}
+            </span>
+          )}
+        </div>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button type="button" style={{ ...styles.btnRemove, opacity: canRemove ? 1 : 0.4, gap: '6px', fontSize: '0.82rem', padding: '7px 12px' }} onClick={() => onRemove(idx)} disabled={!canRemove}>
+          <span className="material-icons-round" style={{ fontSize: '16px' }}>delete</span>
+          {canRemove ? 'Hapus' : 'Utama'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function EmployeeFormFields({ form, onChange, onAssignmentsChange, companyNames, styles }) {
   const addAssignment = () => onAssignmentsChange([...form.companies, { name: companyNames[0] || COMPANIES[0], class: '', jobLevel: 'Staff' }])
   const removeAssignment = idx => onAssignmentsChange(form.companies.filter((_, i) => i !== idx))
@@ -352,31 +453,16 @@ function EmployeeFormFields({ form, onChange, onAssignmentsChange, companyNames,
       <div style={{ border: '1px solid #dbe5f0', borderRadius: '16px', background: '#f8fbff', padding: '1rem', marginBottom: '1rem' }}>
         <SectionHeading icon="apartment" title="Penugasan Perusahaan & Divisi" subtitle="Satu karyawan bisa punya lebih dari satu assignment." accent="#2563eb" />
         {form.companies.map((assignment, idx) => (
-          <div key={idx} style={styles.assignCard}>
-            <div style={styles.grid3}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Company</label>
-                <select style={styles.select} value={assignment.name} onChange={e => updateAssignment(idx, 'name', e.target.value)}>
-                  {companyNames.map(company => <option key={company} value={company}>{company}</option>)}
-                </select>
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Class</label>
-                <input style={styles.input} required value={assignment.class} onChange={e => updateAssignment(idx, 'class', e.target.value)} placeholder="IT" />
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Job Level</label>
-                <select style={styles.select} value={assignment.jobLevel} onChange={e => updateAssignment(idx, 'jobLevel', e.target.value)}>
-                  {JOB_LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" style={styles.btnRemove} onClick={() => removeAssignment(idx)} disabled={form.companies.length === 1}>
-                <span className="material-icons-round" style={{ fontSize: '18px' }}>delete</span>
-              </button>
-            </div>
-          </div>
+          <AssignmentRow
+            key={idx}
+            idx={idx}
+            assignment={assignment}
+            companyNames={companyNames}
+            onUpdate={updateAssignment}
+            onRemove={removeAssignment}
+            canRemove={form.companies.length > 1}
+            styles={styles}
+          />
         ))}
         <button type="button" style={styles.btnAdd} onClick={addAssignment}>
           <span className="material-icons-round" style={{ fontSize: '16px' }}>add</span>
