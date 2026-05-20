@@ -1,3 +1,6 @@
+﻿const fs = require('fs');
+const path = require('path');
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
