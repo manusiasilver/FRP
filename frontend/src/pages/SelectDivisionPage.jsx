@@ -104,21 +104,25 @@ export default function SelectDivisionPage({
   user: userProp = null,
   includeAllCompanies = false,
   userInfoEndpoint,
+  forceFetchUserInfo = false,
 } = {}) {
   const navigate = useNavigate()
   const { user: sessionUser, setUser } = useUser()
   const activeUser = userProp || sessionUser || null
   const [fallbackUser, setFallbackUser] = useState(null)
-  const [loading, setLoading] = useState(!activeUser)
+  const [loading, setLoading] = useState(forceFetchUserInfo || !activeUser)
   const [hoveredIdx, setHoveredIdx] = useState(null)
   const [selectedCompany, setSelectedCompany] = useState('')
   const [selectedDivision, setSelectedDivision] = useState('')
   const [selectedJobLevel, setSelectedJobLevel] = useState('')
   const [submitError, setSubmitError] = useState('')
   const resolvedUserInfoEndpoint = userInfoEndpoint || (includeAllCompanies ? '/api/data/select-company' : '/api/data/select-division')
+  const isDebugAccessEnabled =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('debug-access') === '1'
 
   useEffect(() => {
-    if (!isOpen || activeUser) return undefined
+    if (!isOpen || (activeUser && !forceFetchUserInfo)) return undefined
 
     let cancelled = false
 
@@ -135,6 +139,13 @@ export default function SelectDivisionPage({
         if (cancelled) return
 
         const userInfo = payload?.user || payload || null
+        if (isDebugAccessEnabled) {
+          console.info('[Access Debug] fetched user info', {
+            endpoint: resolvedUserInfoEndpoint,
+            payload,
+            userInfo,
+          })
+        }
         setFallbackUser(userInfo)
         setUser(userInfo)
       })
@@ -151,9 +162,9 @@ export default function SelectDivisionPage({
     return () => {
       cancelled = true
     }
-  }, [activeUser, isOpen, resolvedUserInfoEndpoint, setUser])
+  }, [activeUser, forceFetchUserInfo, isDebugAccessEnabled, isOpen, resolvedUserInfoEndpoint, setUser])
 
-  const userInfo = activeUser || fallbackUser
+  const userInfo = fallbackUser || activeUser
   const companyOptions = useMemo(() => getCompanyOptionsFromUserInfo(userInfo), [userInfo])
   const divisions = useMemo(
     () => getDivisionOptionsFromUserInfo(userInfo, { includeAllCompanies }),
@@ -164,6 +175,36 @@ export default function SelectDivisionPage({
     if (!selectedCompany) return divisions
     return divisions.filter((division) => division.name === selectedCompany)
   }, [divisions, selectedCompany])
+
+  useEffect(() => {
+    if (!isDebugAccessEnabled || !isOpen) return
+
+    console.info('[Access Debug] select state', {
+      resolvedUserInfoEndpoint,
+      userInfo,
+      companyOptions,
+      divisions,
+      filteredDivisions,
+      selectedCompany,
+      selectedDivision,
+      selectedJobLevel,
+      forceFetchUserInfo,
+      includeAllCompanies,
+    })
+  }, [
+    companyOptions,
+    divisions,
+    filteredDivisions,
+    forceFetchUserInfo,
+    includeAllCompanies,
+    isDebugAccessEnabled,
+    isOpen,
+    resolvedUserInfoEndpoint,
+    selectedCompany,
+    selectedDivision,
+    selectedJobLevel,
+    userInfo,
+  ])
 
   useEffect(() => {
     if (!isOpen || !userInfo) return
@@ -311,6 +352,22 @@ export default function SelectDivisionPage({
         {loading && (
           <div style={{ padding: '16px 0', color: '#64748b' }}>
             Memuat...
+          </div>
+        )}
+
+        {!loading && isDebugAccessEnabled && (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: '12px',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              color: '#1d4ed8',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+            }}
+          >
+            {`Debug access aktif: companies=${companyOptions.length}, divisions=${divisions.length}, selectedCompany=${selectedCompany || '-'}, endpoint=${resolvedUserInfoEndpoint}`}
           </div>
         )}
 

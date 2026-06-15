@@ -265,6 +265,8 @@ function Sidebar({
   userRole = 'staff',
   userIsAdmin = false,
   allAssignments = [],
+  canChangeAccess = false,
+  changeAccessHref = '',
   onToggleCollapse,
   onCloseMobile,
   onChangeAccess,
@@ -308,8 +310,8 @@ function Sidebar({
       : []
 
   const uniqueCompanies = [...new Set((resolvedAssignments || []).map(a => a.name))]
-  const showBack = (resolvedAssignments || []).length > 1
-  const backUrl = uniqueCompanies.length > 1 ? '/select-company' : '/select-division'
+  const showChangeAccess = canChangeAccess || (resolvedAssignments || []).length > 1
+  const backUrl = changeAccessHref || (uniqueCompanies.length > 1 ? '/select-company' : '/select-division')
   const rpApprovalHref = '/rp-approval'
   const normalizedRole = normalizeText(resolvedUserRole)
   const normalizedJobLevel = normalizeText(resolvedUserJobLevel)
@@ -407,7 +409,7 @@ function Sidebar({
 
   const secondaryItems = useMemo(() => {
     const rawItems = [
-      ...(showBack && !hideMenu ? [{
+      ...(showChangeAccess && !hideMenu ? [{
         label: 'Change Access',
         href: backUrl,
         icon: 'switch_account',
@@ -425,7 +427,7 @@ function Sidebar({
     ]
 
     return filterMenuItems(rawItems, authContext)
-  }, [authContext, backUrl, hideMenu, showBack])
+  }, [authContext, backUrl, hideMenu, showChangeAccess])
 
   const initialExpandedPathname = useMemo(() => getInitialExpandedByPathname(pathname), [pathname])
   const [userExpandedGroups, setUserExpandedGroups] = useState({})

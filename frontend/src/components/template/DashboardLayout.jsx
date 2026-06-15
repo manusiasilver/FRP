@@ -147,6 +147,8 @@ export default function DashboardLayout() {
   const { user } = useUser()
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false)
   const u = user || {}
+  const canChangeAccess = hasMultipleAccessOptions(u)
+  const changeAccessHref = getUniqueCompanyCount(u) > 1 ? '/select-company' : '/select-division'
   const breadcrumbLabelMap = {
     '/': 'Dashboard',
     '/frp': 'New FRP',
@@ -204,6 +206,8 @@ export default function DashboardLayout() {
         userRole={u.role || u.selectedRole}
         userIsAdmin={u.role === 'administrator' || u.selectedRole === 'administrator'}
         allAssignments={u.allAssignments || []}
+        canChangeAccess={canChangeAccess}
+        changeAccessHref={changeAccessHref}
         onToggleCollapse={handleSidebarToggle}
         onCloseMobile={() => setMobileMenuOpen(false)}
         onChangeAccess={(href) => {
