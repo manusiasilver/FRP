@@ -52,12 +52,58 @@ const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
   return [...new Map(divisions.map((division) => [`${division.name}::${division.class}`, division])).values()]
 }
 
+const getCompanyOptionsFromUserInfo = (userInfo) => {
+  const assignments = Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []
+  const companies = Array.isArray(userInfo?.companies) ? userInfo.companies : []
+  const departments = Array.isArray(userInfo?.departments) ? userInfo.departments : []
+  const optionMap = new Map()
+
+  const addOption = (raw) => {
+    const name = String(
+      raw?.name ||
+      raw?.companyName ||
+      raw?.company ||
+      '',
+    ).trim()
+
+    if (!name || optionMap.has(name)) return
+
+    optionMap.set(name, {
+      id: raw?.companyId || raw?.id || '',
+      code: raw?.companyCode || raw?.code || '',
+      name,
+      isPrimary: raw?.is_primary ?? raw?.isPrimary ?? 0,
+    })
+  }
+
+  companies.forEach(addOption)
+  assignments.forEach(addOption)
+  departments.forEach(addOption)
+
+  if (optionMap.size === 0 && userInfo?.selectedCompany) {
+    addOption({
+      id: userInfo?.selectedCompanyId,
+      code: userInfo?.selectedCompanyCode,
+      name: userInfo.selectedCompany,
+    })
+  }
+
+  return [...optionMap.values()].sort((a, b) => {
+    if (Number(b.isPrimary || 0) !== Number(a.isPrimary || 0)) {
+      return Number(b.isPrimary || 0) - Number(a.isPrimary || 0)
+    }
+
+    return a.name.localeCompare(b.name, 'id')
+  })
+}
+
 export default function SelectDivisionPage({
   isOpen = true,
   onClose,
   onSuccess,
   user: userProp = null,
   includeAllCompanies = false,
+  userInfoEndpoint,
 } = {}) {
   const navigate = useNavigate()
   const { user: sessionUser, setUser } = useUser()
@@ -69,13 +115,14 @@ export default function SelectDivisionPage({
   const [selectedDivision, setSelectedDivision] = useState('')
   const [selectedJobLevel, setSelectedJobLevel] = useState('')
   const [submitError, setSubmitError] = useState('')
+  const resolvedUserInfoEndpoint = userInfoEndpoint || (includeAllCompanies ? '/api/data/select-company' : '/api/data/select-division')
 
   useEffect(() => {
     if (!isOpen || activeUser) return undefined
 
     let cancelled = false
 
-    fetch('/api/user/info')
+    fetch(resolvedUserInfoEndpoint)
       .then((response) => {
         if (!response.ok) {
           window.location.href = '/'
@@ -104,23 +151,39 @@ export default function SelectDivisionPage({
     return () => {
       cancelled = true
     }
-  }, [activeUser, isOpen, setUser])
+  }, [activeUser, isOpen, resolvedUserInfoEndpoint, setUser])
 
   const userInfo = activeUser || fallbackUser
+  const companyOptions = useMemo(() => getCompanyOptionsFromUserInfo(userInfo), [userInfo])
   const divisions = useMemo(
     () => getDivisionOptionsFromUserInfo(userInfo, { includeAllCompanies }),
     [includeAllCompanies, userInfo],
   )
+  const hasMultipleCompanies = companyOptions.length > 1
+  const filteredDivisions = useMemo(() => {
+    if (!selectedCompany) return divisions
+    return divisions.filter((division) => division.name === selectedCompany)
+  }, [divisions, selectedCompany])
 
   useEffect(() => {
     if (!isOpen || !userInfo) return
 
+    const initialCompany =
+      userInfo.selectedCompany ||
+      companyOptions[0]?.name ||
+      ''
+
     const initialDivision =
       userInfo.selectedDivision ||
+      divisions.find((division) => division.name === initialCompany)?.class ||
       divisions[0]?.class ||
       ''
 
     const initialItem =
+      divisions.find((division) => (
+        division.name === initialCompany &&
+        (division.class === initialDivision || !initialDivision)
+      )) ||
       divisions.find((division) => division.class === initialDivision || division.name === initialDivision) ||
       divisions[0]
 
@@ -128,25 +191,56 @@ export default function SelectDivisionPage({
       setSelectedCompany(initialItem.name || userInfo.selectedCompany || '')
       setSelectedDivision(initialItem.class || '')
       setSelectedJobLevel(initialItem.jobLevel || '')
+    } else if (initialCompany) {
+      setSelectedCompany(initialCompany)
     }
 
     setLoading(false)
-  }, [divisions, isOpen, userInfo])
+  }, [companyOptions, divisions, isOpen, userInfo])
+
+  useEffect(() => {
+    if (!isOpen || filteredDivisions.length === 0) return
+
+    const selectedItem = filteredDivisions.find((division) => division.class === selectedDivision)
+    if (selectedItem) {
+      if (selectedItem.jobLevel !== selectedJobLevel) {
+        setSelectedJobLevel(selectedItem.jobLevel || '')
+      }
+      return
+    }
+
+    const nextDivision = filteredDivisions[0]
+    setSelectedDivision(nextDivision.class || '')
+    setSelectedJobLevel(nextDivision.jobLevel || '')
+  }, [filteredDivisions, isOpen, selectedDivision, selectedJobLevel])
 
   const handleSelect = async () => {
+    if (!selectedCompany && hasMultipleCompanies) {
+      setSubmitError('Pilih company terlebih dahulu.')
+      return
+    }
+
     if (!selectedDivision) {
       setSubmitError('Pilih divisi terlebih dahulu.')
       return
     }
 
     const selectedItem =
+      filteredDivisions.find((division) =>
+        division.class === selectedDivision &&
+        (!selectedCompany || division.name === selectedCompany)
+      ) ||
+      filteredDivisions.find((division) => division.class === selectedDivision) ||
       divisions.find((division) =>
         division.class === selectedDivision &&
         (!selectedCompany || division.name === selectedCompany)
       ) ||
-      divisions.find((division) => division.class === selectedDivision) ||
       null
 
+    const selectedCompanyOption =
+      companyOptions.find((company) => company.name === (selectedItem?.name || selectedCompany)) ||
+      companyOptions.find((company) => company.name === selectedCompany) ||
+      null
     const company = selectedItem?.name || selectedCompany || userInfo?.selectedCompany || ''
 
     try {
@@ -167,6 +261,8 @@ export default function SelectDivisionPage({
         setUser({
           ...userInfo,
           selectedCompany: company,
+          selectedCompanyId: selectedCompanyOption?.id || userInfo?.selectedCompanyId || '',
+          selectedCompanyCode: selectedCompanyOption?.code || userInfo?.selectedCompanyCode || '',
           selectedDivision,
           selectedJobLevel,
         }, { replaceSelection: true })
@@ -198,8 +294,8 @@ export default function SelectDivisionPage({
   return createPortal(
     <DialogChangeAccess
       isOpen
-      title="Pilih Divisi"
-      eyebrow="Select Division"
+      title={hasMultipleCompanies ? 'Pilih Akses' : 'Pilih Divisi'}
+      eyebrow={hasMultipleCompanies ? 'Select Company & Division' : 'Select Division'}
       labelBatal="Batal"
       labelSimpan="Pilih"
       onClose={handleClose}
@@ -207,7 +303,9 @@ export default function SelectDivisionPage({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <p style={{ margin: 0, color: '#64748b', lineHeight: 1.6 }}>
-          Pilih divisi dan level jabatan Anda untuk melanjutkan.
+          {hasMultipleCompanies
+            ? 'Pilih company dan divisi Anda untuk melanjutkan.'
+            : 'Pilih divisi dan level jabatan Anda untuk melanjutkan.'}
         </p>
 
         {loading && (
@@ -238,7 +336,70 @@ export default function SelectDivisionPage({
 
         {!loading && divisions.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {divisions.map((division, index) => {
+            {hasMultipleCompanies && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8' }}>
+                  Company
+                </div>
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {companyOptions.map((company, index) => {
+                    const isSelected = selectedCompany === company.name
+
+                    return (
+                      <button
+                        key={`${company.id || company.code || company.name}-${index}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCompany(company.name || '')
+                          setSubmitError('')
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          width: '100%',
+                          padding: '14px 16px',
+                          borderRadius: '16px',
+                          border: `1.5px solid ${isSelected ? '#2563eb' : '#e2e8f0'}`,
+                          background: isSelected ? '#eff6ff' : '#ffffff',
+                          color: isSelected ? '#1d4ed8' : '#334155',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? '0 10px 24px rgba(37, 99, 235, 0.08)' : 'none',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.96rem' }}>
+                            {company.name}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: isSelected ? '#2563eb' : '#94a3b8', marginTop: '2px' }}>
+                            {company.code || 'Company Access'}
+                          </div>
+                        </div>
+                        <span
+                          className="material-icons-round"
+                          style={{ color: isSelected ? '#2563eb' : '#cbd5e1', fontSize: '20px' }}
+                        >
+                          {isSelected ? 'check_circle' : 'business'}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginTop: hasMultipleCompanies ? '4px' : 0 }}>
+              Divisi
+            </div>
+            {filteredDivisions.length === 0 && (
+              <div style={{ padding: '12px 14px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b' }}>
+                Tidak ada divisi untuk company yang dipilih.
+              </div>
+            )}
+            {filteredDivisions.map((division, index) => {
               const isSelected = selectedDivision === division.class && selectedCompany === division.name
 
               return (
@@ -272,7 +433,7 @@ export default function SelectDivisionPage({
                 >
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '0.98rem' }}>
-                      {division.label || division.class || division.name}
+                      {hasMultipleCompanies ? (division.class || division.label || division.name) : (division.label || division.class || division.name)}
                     </div>
                     <div style={{ fontSize: '0.82rem', color: isSelected ? '#15803d' : '#94a3b8', marginTop: '2px' }}>
                       {division.jobLevel || selectedJobLevel || '-'}
