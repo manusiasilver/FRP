@@ -17,7 +17,7 @@ export default function TabsFilterApprovalRp({
     tabDropdownRef
 }) {
     return (
-        <div style={{ padding: isMobile ? '0 12px 12px 12px' : '0 24px 20px 24px', background: 'white' }}>
+        <div style={{ padding: isMobile ? '0 12px 8px 12px' : '0 24px 8px 24px', background: 'white' }}>
             {isMobile ? (
                 <div ref={tabDropdownRef} style={{ position: 'relative' }}>
                     <button

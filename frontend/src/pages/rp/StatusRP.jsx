@@ -72,7 +72,7 @@ function FilterField({ label, icon, children }) {
   )
 }
 
-function SearchableSelect({ value, onChange, options, placeholder = 'Pilih...', style }) {
+function SearchableSelect({ value, onChange, options, placeholder = 'Select...', style }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const ref = useRef(null)

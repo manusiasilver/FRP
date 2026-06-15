@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import ButtonDetailStatusRp from '../button/ButtonDetailStatusRp.jsx'
 import { DataTableIdentity } from '../table/DataTable.jsx'
 
 
@@ -126,16 +125,58 @@ function renderStatus(status) {
   )
 }
 
+function getPurchaseCategory(rp) {
+  return rp?.purchaseCategory || rp?.kategoriPembelian || '-'
+}
+
+function getRpDescription(rp) {
+  return rp?.description || rp?.deskripsi || '-'
+}
+
+function renderInfoChip(value, palette = {}) {
+  return (
+    <span
+      title={value}
+      style={{
+        display: 'inline-block',
+        maxWidth: '100%',
+        padding: '4px 8px',
+        borderRadius: '10px',
+        border: `1px solid ${palette.border || '#dbe5f0'}`,
+        background: palette.background || '#f8fafc',
+        color: palette.color || '#334155',
+        fontSize: '11px',
+        fontWeight: 700,
+        lineHeight: 1.35,
+        whiteSpace: 'normal',
+        wordBreak: 'break-word',
+        boxSizing: 'border-box',
+      }}
+    >
+      {value || '-'}
+    </span>
+  )
+}
+
+const clampTextStyle = {
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden',
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
+}
+
 const desktopHeaders = [
   { label: 'FRP Number', key: 'date' },
   { label: 'Requestor & Vendor', key: 'creator' },
   { label: 'Division', key: 'division' },
   { label: 'Receiver PIC', key: 'receiverPic' },
+  { label: 'Description', key: null },
   { label: 'Total Amount', key: 'total' },
   { label: 'Status', key: 'status' },
   { label: 'Action', key: null },
 ]
-const desktopColumnWidths = ['16%', '18%', '12%', '13%', '11%', '12%', '18%']
+const desktopColumnWidths = ['10%', '17%', '10%', '14%', '14%', '10%', '9%', '16%']
 
 export default function DataTableRp({
   tab,
@@ -290,6 +331,8 @@ export default function DataTableRp({
         >
           {paginated.map((rp) => {
             const isOpen = expandedId === rp.id
+            const purchaseCategory = getPurchaseCategory(rp)
+            const description = getRpDescription(rp)
             return (
               <div
                 key={rp.id}
@@ -370,7 +413,7 @@ export default function DataTableRp({
                   <div
                     style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}
                   >
-                    {[
+                    {[ 
                       ['Pemohon', rp.dibuatOleh || '-'],
                       ['Vendor', rp.vendorSuggestion || '-'],
                       ['Divisi & Proses', `${rp.divisi || '-'} (Process by ${rp.diprosesOleh || '-'})`],
@@ -391,6 +434,55 @@ export default function DataTableRp({
                         <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500 }}>{value}</div>
                       </div>
                     ))}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          color: '#94a3b8',
+                          letterSpacing: '0.04em',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        Purchase Category
+                      </div>
+                      {renderInfoChip(purchaseCategory, {
+                        background: '#eff6ff',
+                        border: '#bfdbfe',
+                        color: '#1d4ed8',
+                      })}
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <div
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          color: '#94a3b8',
+                          letterSpacing: '0.04em',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        Description
+                      </div>
+                      <div
+                        title={description}
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          border: '1px solid #e2e8f0',
+                          background: '#f8fafc',
+                          color: '#334155',
+                          fontSize: '12px',
+                          lineHeight: 1.45,
+                          ...clampTextStyle,
+                          WebkitLineClamp: 3,
+                        }}
+                      >
+                        {description}
+                      </div>
+                    </div>
                     <div style={{ gridColumn: '1 / -1' }}>
                       <div
                         style={{
@@ -562,6 +654,173 @@ export default function DataTableRp({
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .approval-rp-desktop-table {
+          width: 100%;
+          max-width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          table-layout: fixed;
+          font-size: 13px;
+        }
+        .approval-rp-desktop-header-table {
+          width: 100%;
+          max-width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          table-layout: fixed;
+          font-size: 13px;
+          background: #f8fafc;
+        }
+        .approval-rp-desktop-header th {
+          padding: 12px 12px;
+          text-align: left;
+          color: #7f7f7f;
+          font-family: "IBM Plex Mono", monospace;
+          font-weight: 600;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          white-space: normal;
+          line-height: 1.35;
+          background: #f8fafc;
+          border-bottom: 1px solid rgba(26, 42, 87, 0.08);
+          user-select: none;
+        }
+        .approval-rp-cell {
+          padding: 11px 12px;
+          border-bottom: 1px solid #e8edf4;
+          vertical-align: top;
+        }
+        .approval-rp-summary {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          min-width: 0;
+        }
+        .approval-rp-toggle {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          border-radius: 999px;
+          border: 1px solid rgba(30, 94, 77, 0.16);
+          color: #1e5e4d;
+          cursor: pointer;
+          transition: all 0.2s;
+          padding: 0;
+          flex-shrink: 0;
+        }
+        .approval-rp-number-button {
+          display: inline-flex;
+          align-items: flex-start;
+          gap: 6px;
+          border: none;
+          background: transparent;
+          padding: 0;
+          cursor: pointer;
+          font-family: inherit;
+          text-align: left;
+        }
+        .approval-rp-number {
+          font-weight: 700;
+          color: #1d4ed8;
+          font-size: 14px;
+          line-height: 1.3;
+          word-break: break-word;
+        }
+        .approval-rp-subtle {
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 500;
+          line-height: 1.45;
+        }
+        .approval-rp-tag {
+          display: inline-flex;
+          align-items: center;
+          max-width: 100%;
+          padding: 3px 8px;
+          border-radius: 999px;
+          background: #e2e8f0;
+          color: #334155;
+          font-size: 10.5px;
+          font-weight: 700;
+          line-height: 1.35;
+          margin-bottom: 4px;
+          word-break: break-word;
+        }
+        .approval-rp-description {
+          color: #475569;
+          font-size: 11.5px;
+          line-height: 1.45;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          overflow: hidden;
+          word-break: break-word;
+        }
+        .approval-rp-total {
+          font-family: "IBM Plex Mono", monospace;
+          font-weight: 700;
+          color: #0f172a;
+          font-size: 12px;
+          line-height: 1.45;
+          word-break: break-word;
+        }
+        .approval-rp-action-wrap {
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+          gap: 6px;
+          min-width: 0;
+          white-space: nowrap;
+        }
+        .approval-rp-action-wrap > div {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-start !important;
+          flex-wrap: nowrap !important;
+          gap: 6px !important;
+          min-width: 0;
+        }
+        .approval-rp-action-wrap > div > * {
+          flex-shrink: 0;
+        }
+        .approval-rp-action-cell {
+          padding-left: 18px;
+        }
+        .approval-rp-action-header {
+          padding-left: 18px !important;
+        }
+        .approval-rp-identity {
+          min-width: 0;
+          gap: 10px;
+          align-items: flex-start;
+        }
+        .approval-rp-identity .users-table__avatar {
+          width: 32px;
+          height: 32px;
+          font-size: 11px;
+        }
+        .approval-rp-identity .users-table__name-row {
+          gap: 6px;
+          align-items: flex-start;
+        }
+        .approval-rp-identity .users-table__name {
+          font-size: 14px;
+          line-height: 1.3;
+          color: #1e293b;
+        }
+        .approval-rp-identity .users-table__meta {
+          margin-top: 4px;
+          font-size: 11px;
+          line-height: 1.45;
+          letter-spacing: 0.02em;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          overflow: hidden;
+        }
         .accordion-row-actions {
           animation: accordionSlideDown 0.2s cubic-bezier(0.4,0,0.2,1);
         }
@@ -582,66 +841,48 @@ export default function DataTableRp({
       `}</style>
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Desktop Headers */}
-        <table style={{ width: '100%', maxWidth: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.875rem', tableLayout: 'fixed' }}>
-          <colgroup>
-            {desktopColumnWidths.map((width, i) => (
-              <col key={`desktop-head-col-${i}`} style={{ width }} />
-            ))}
-          </colgroup>
-          <thead>
-            <tr>
-              {desktopHeaders.map((header) => (
-                <th
-                  key={header.label || `hdr-${header.key}`}
-                  onClick={() => requestSort(header.key)}
-                  style={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 6,
-                    padding: '1rem',
-                    textAlign: 'left',
-                    color: '#7f7f7f', // var(--neutral-gray)
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontWeight: 600, // Matching the general look
-                    fontSize: '0.76rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    whiteSpace: 'nowrap',
-                    background: 'rgba(24, 43, 88, 0.04)',
-                    borderBottom: '1px solid rgba(26, 42, 87, 0.08)',
-                    cursor: header.key ? 'pointer' : 'default',
-                    userSelect: 'none',
-                  }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                    {header.label}
-                    {renderSortIcon(header.key)}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-        </table>
-
-        {/* Desktop Body */}
-        <div className="dashboard-main-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
-          <table style={{ width: '100%', maxWidth: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.875rem', tableLayout: 'fixed' }}>
+        <div style={{ flexShrink: 0, overflowX: 'auto', background: '#f8fafc', borderBottom: '1px solid rgba(26, 42, 87, 0.08)' }}>
+          <table className="approval-rp-desktop-header-table">
             <colgroup>
-              {desktopColumnWidths.map((width, i) => (
-                <col key={`desktop-body-col-${i}`} style={{ width }} />
+              {desktopColumnWidths.map((width, index) => (
+                <col key={`desktop-col-${index}`} style={{ width }} />
+              ))}
+            </colgroup>
+            <thead className="approval-rp-desktop-header">
+              <tr>
+                {desktopHeaders.map((header) => (
+                  <th
+                    key={header.label || `hdr-${header.key}`}
+                    onClick={() => header.key && requestSort(header.key)}
+                    className={header.label === 'Action' ? 'approval-rp-action-header' : undefined}
+                    style={{ cursor: header.key ? 'pointer' : 'default' }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                      {header.label}
+                      {renderSortIcon(header.key)}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <div className="dashboard-main-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'auto', background: 'white' }}>
+          <table className="approval-rp-desktop-table">
+            <colgroup>
+              {desktopColumnWidths.map((width, index) => (
+                <col key={`desktop-col-body-${index}`} style={{ width }} />
               ))}
             </colgroup>
             <tbody>
             {paginated.length > 0 ? paginated.map((rp, index) => {
               const isOpen = expandedId === rp.id
+              const purchaseCategory = getPurchaseCategory(rp)
+              const description = getRpDescription(rp)
               const absoluteIndex = (safeCurrentPage - 1) * rowsPerPage + index
-              const rowBg = absoluteIndex % 2 === 0 ? 'white' : '#fafbfc'
+              const rowBg = absoluteIndex % 2 === 0 ? 'white' : '#fcfdff'
 
               const td = {
-                padding: '14px 16px',
-                borderBottom: '1px solid #e8edf4',
-                verticalAlign: 'middle',
                 background: rowBg,
               }
 
@@ -653,7 +894,7 @@ export default function DataTableRp({
                     onMouseEnter={(e) => {
                       const children = e.currentTarget.children
                       for (let i = 0; i < children.length; i++) {
-                        children[i].style.background = '#eff6ff'
+                        children[i].style.background = '#f7fbff'
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -664,107 +905,93 @@ export default function DataTableRp({
                     }}
                   >
                     {/* Ringkasan */}
-                    <td style={td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {/* Accordion Toggle Button */}
+                    <td className="approval-rp-cell" style={td}>
+                      <div className="approval-rp-summary">
+                        <button
+                          type="button"
+                          className="approval-rp-toggle"
+                          onClick={(e) => { e.stopPropagation(); setExpandedId(prev => (prev === rp.id ? null : rp.id)); }}
+                          style={{ background: isOpen ? 'rgba(30, 94, 77, 0.12)' : 'rgba(30, 94, 77, 0.04)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(30, 94, 77, 0.12)'
+                            e.currentTarget.style.borderColor = 'rgba(30, 94, 77, 0.28)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isOpen ? 'rgba(30, 94, 77, 0.12)' : 'rgba(30, 94, 77, 0.04)'
+                            e.currentTarget.style.borderColor = 'rgba(30, 94, 77, 0.16)'
+                          }}
+                        >
+                          <span className="material-icons-round" style={{ fontSize: '17px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                            expand_more
+                          </span>
+                        </button>
+
+                        <div style={{ minWidth: 0 }}>
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setExpandedId(prev => (prev === rp.id ? null : rp.id)); }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '50%',
-                              border: '1.5px solid rgba(30, 94, 77, 0.15)',
-                              background: isOpen ? 'rgba(30, 94, 77, 0.15)' : 'rgba(30, 94, 77, 0.05)',
-                              color: '#1e5e4d',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              padding: 0,
-                              flexShrink: 0,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(30, 94, 77, 0.15)'
-                              e.currentTarget.style.borderColor = 'rgba(30, 94, 77, 0.3)'
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isOpen) {
-                                e.currentTarget.style.background = 'rgba(30, 94, 77, 0.05)'
-                                e.currentTarget.style.borderColor = 'rgba(30, 94, 77, 0.15)'
-                              }
-                            }}
+                            className="approval-rp-number-button"
+                            onClick={(e) => { e.stopPropagation(); copyRpNo(rp.id, rp.rpNo); }}
                           >
-                            <span className="material-icons-round" style={{ fontSize: '18px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                              expand_more
+                            <span className="approval-rp-number">{rp.rpNo || 'Draft'}</span>
+                            <span className="material-icons-round" style={{ fontSize: '14px', color: copiedId === rp.id ? '#15803d' : '#94a3b8' }}>
+                              {copiedId === rp.id ? 'check' : 'content_copy'}
                             </span>
                           </button>
-
-                          <div style={{ minWidth: 0 }}>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); copyRpNo(rp.id, rp.rpNo); }}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                            >
-                              <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem', marginBottom: '2px', wordBreak: 'break-word' }}>{rp.rpNo || 'Draft'}</span>
-                              <span className="material-icons-round" style={{ fontSize: '14px', color: copiedId === rp.id ? '#15803d' : '#94a3b8' }}>
-                                {copiedId === rp.id ? 'check' : 'content_copy'}
-                              </span>
-                            </button>
-                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-                              {formatDate(rp.createdAt || rp.tanggalDibutuhkan)}
-                            </div>
+                          <div className="approval-rp-subtle">
+                            {formatDate(rp.createdAt || rp.tanggalDibutuhkan)}
                           </div>
                         </div>
+                      </div>
                     </td>
                     {/* Pemohon & Vendor */}
-                    <td style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.45 }}>
-                      <DataTableIdentity 
-                        title={rp.dibuatOleh || '-'} 
-                        subtitle={rp.vendorSuggestion || '-'} 
+                    <td className="approval-rp-cell" style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      <DataTableIdentity
+                        className="approval-rp-identity"
+                        title={rp.dibuatOleh || '-'}
+                        subtitle={rp.vendorSuggestion || '-'}
                       />
                     </td>
                     {/* Divisi & Proses */}
-                    <td style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.45 }}>
-                      <span style={{ background: '#e0e7ef', color: '#334155', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 600, display: 'inline-block', maxWidth: '100%', wordBreak: 'break-word', marginBottom: '4px' }}>
-                        {rp.divisi || '-'}
-                      </span>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
+                    <td className="approval-rp-cell" style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                      <span className="approval-rp-tag">{rp.divisi || '-'}</span>
+                      <div className="approval-rp-subtle">
                         Process by {rp.diprosesOleh || '-'}
                       </div>
                     </td>
                     {/* PIC Penerima */}
-                    <td style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word', color: '#334155', fontWeight: 500 }}>
-                      <DataTableIdentity title={rp.receiverPic || rp.picPenerima || '-'} />
+                    <td className="approval-rp-cell" style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word', color: '#334155', fontWeight: 500 }}>
+                      <DataTableIdentity
+                        className="approval-rp-identity"
+                        title={rp.receiverPic || rp.picPenerima || '-'}
+                        subtitle={purchaseCategory}
+                      />
+                    </td>
+                    <td className="approval-rp-cell" style={td}>
+                      <div title={description} className="approval-rp-description">
+                        {description}
+                      </div>
                     </td>
                     {/* Total */}
-                    <td
-                      style={{
-                        ...td,
-                        fontFamily: 'IBM Plex Mono, monospace',
-                        fontWeight: 700,
-                        color: '#0f172a',
-                        wordBreak: 'break-word',
-                      }}
-                    >
+                    <td className="approval-rp-cell approval-rp-total" style={td}>
                       {formatCurrency(calcTotal(rp))}
                     </td>
                     {/* Status */}
-                    <td style={td}>
+                    <td className="approval-rp-cell" style={td}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {renderStatus(rp.status)}
                       </div>
                     </td>
                     {/* Action Column */}
-                    <td style={{ ...td, borderRight: 'none', overflow: 'visible' }} onClick={(e) => e.stopPropagation()}>
-                      {renderRowActions(rp, { 
-                        showDetail: true, 
-                        showPreview: tab === 'approved', 
-                        showKeFrp: tab === 'approved', 
-                        showActions: showRowActions, 
-                        showRevert: true 
-                      })}
+                    <td className="approval-rp-cell approval-rp-action-cell" style={{ ...td, overflow: 'visible' }} onClick={(e) => e.stopPropagation()}>
+                      <div className="approval-rp-action-wrap">
+                        {renderRowActions(rp, {
+                          showDetail: true,
+                          showPreview: tab === 'approved',
+                          showKeFrp: tab === 'approved',
+                          showActions: showRowActions,
+                          showRevert: true
+                        })}
+                      </div>
                     </td>
                   </tr>
 
