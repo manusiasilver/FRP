@@ -18,6 +18,10 @@ function normalizeText(value) {
 }
 
 function getAssignmentCompany(assignment) {
+  if (typeof assignment === 'string') {
+    return normalizeText(assignment)
+  }
+
   return normalizeText(
     assignment?.name ||
     assignment?.companyName ||

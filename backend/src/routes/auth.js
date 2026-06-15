@@ -23,12 +23,51 @@ function getAssignmentClasses(assignment) {
     ].filter(Boolean);
 }
 
+function getUserCompanies(user) {
+    const companyMap = new Map();
+
+    const addCompany = (raw) => {
+        if (typeof raw === 'string') {
+            const name = raw.trim();
+            if (!name || companyMap.has(name)) return;
+            companyMap.set(name, { id: '', code: '', name, is_primary: 0 });
+            return;
+        }
+
+        const name = String(raw?.name || raw?.companyName || raw?.company || '').trim();
+        if (!name || companyMap.has(name)) return;
+
+        companyMap.set(name, {
+            id: raw?.companyId || raw?.id || '',
+            code: raw?.companyCode || raw?.code || '',
+            name,
+            is_primary: raw?.is_primary ?? raw?.isPrimary ?? 0,
+        });
+    };
+
+    if (Array.isArray(user.companies)) {
+        user.companies.forEach(addCompany);
+    }
+
+    if (Array.isArray(user.allAssignments)) {
+        user.allAssignments.forEach(addCompany);
+    }
+
+    return [...companyMap.values()];
+}
+
+function findCompany(user, requestedCompany) {
+    const company = String(requestedCompany || '').trim();
+    return getUserCompanies(user).find(item => sameText(item.name, company));
+}
+
 function applySelectedAssignment(req, assignment, requestedCompany, requestedDivision) {
-    const nextCompany = assignment?.name || assignment?.companyName || requestedCompany || req.session.user.selectedCompany || '';
+    const selectedCompany = findCompany(req.session.user, requestedCompany);
+    const nextCompany = assignment?.name || assignment?.companyName || selectedCompany?.name || requestedCompany || req.session.user.selectedCompany || '';
 
     req.session.user.selectedCompany = nextCompany;
-    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || req.session.user.selectedCompanyId || '';
-    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || req.session.user.selectedCompanyCode || '';
+    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || selectedCompany?.id || req.session.user.selectedCompanyId || '';
+    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || selectedCompany?.code || req.session.user.selectedCompanyCode || '';
     req.session.user.selectedDivision = requestedDivision || assignment?.class || assignment?.dept_class || '';
     req.session.user.selectedJobLevel = assignment?.jobLevel || assignment?.job_level_name || req.session.user.selectedJobLevel || '';
     req.session.user.jobLevelRank = assignment?.jobLevelRank || assignment?.job_level_rank || req.session.user.jobLevelRank || null;
@@ -78,22 +117,22 @@ router.post('/login', async (req, res) => {
 
 router.get('/select-company', checkAuth, (req, res) => {
     const user = req.session.user;
-    const companies = [...new Set(user.allAssignments.map(a => a.name))];
+    const companies = getUserCompanies(user);
     if (companies.length === 1) {
-        const assignment = user.allAssignments.find(a => a.name === companies[0]);
-        req.session.user.selectedCompany = companies[0];
-        req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || '';
-        req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || '';
+        req.session.user.selectedCompany = companies[0].name;
+        req.session.user.selectedCompanyId = companies[0].id || '';
+        req.session.user.selectedCompanyCode = companies[0].code || '';
         return res.redirect('/select-division');
     }
     res.sendSPA();
 });
 
 router.post('/select-company', checkAuth, (req, res) => {
-    const assignment = req.session.user.allAssignments.find(a => a.name === req.body.company);
+    const assignment = (req.session.user.allAssignments || []).find(a => a.name === req.body.company);
+    const company = findCompany(req.session.user, req.body.company);
     req.session.user.selectedCompany = req.body.company;
-    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || '';
-    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || '';
+    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || company?.id || '';
+    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || company?.code || '';
     res.redirect('/select-division');
 });
 
@@ -162,15 +201,8 @@ router.get('/api/auth/me', checkAuth, (req, res) => {
 
 router.get('/api/data/select-company', checkAuth, (req, res) => {
     const user = req.session.user;
-    const companies = [...new Set(user.allAssignments.map(a => a.name))];
-    const companyOptions = companies.map(name => {
-        const assignment = user.allAssignments.find(a => a.name === name);
-        return {
-            id: assignment?.companyId || assignment?.id || '',
-            code: assignment?.companyCode || assignment?.code || '',
-            name,
-        };
-    });
+    const companyOptions = getUserCompanies(user);
+    const companies = companyOptions.map(company => company.name);
     res.json({
         companies,
         companyOptions,
@@ -183,16 +215,19 @@ router.get('/api/data/select-company', checkAuth, (req, res) => {
             selectedDivision: user.selectedDivision || '',
             selectedJobLevel: user.selectedJobLevel || '',
             jobLevelRank: user.jobLevelRank || null,
+            companies: user.companies || [],
+            departments: user.departments || [],
             allAssignments: user.allAssignments || [],
         },
     });
 });
 
 router.post('/api/auth/select-company', checkAuth, (req, res) => {
-    const assignment = req.session.user.allAssignments.find(a => a.name === req.body.company);
+    const assignment = (req.session.user.allAssignments || []).find(a => a.name === req.body.company);
+    const company = findCompany(req.session.user, req.body.company);
     req.session.user.selectedCompany = req.body.company;
-    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || '';
-    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || '';
+    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || company?.id || '';
+    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || company?.code || '';
     res.json({
         success: true,
         redirect: '/select-division',
@@ -227,6 +262,8 @@ router.get('/api/data/select-division', checkAuth, (req, res) => {
             selectedDivision: user.selectedDivision || '',
             selectedJobLevel: user.selectedJobLevel || '',
             jobLevelRank: user.jobLevelRank || null,
+            companies: user.companies || [],
+            departments: user.departments || [],
             allAssignments: user.allAssignments || [],
         },
     });

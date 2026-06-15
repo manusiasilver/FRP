@@ -25,13 +25,13 @@ const normalizeDivision = (assignment, index = 0) => {
 const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
   const { includeAllCompanies = false } = options
   const selectedCompany = String(userInfo?.selectedCompany || '').trim()
-  const assignments = Array.isArray(userInfo?.allAssignments) && userInfo.allAssignments.length > 0
-    ? userInfo.allAssignments
-    : (Array.isArray(userInfo?.departments) ? userInfo.departments : []).map((department) => ({
+  const assignmentOptions = Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []
+  const departmentOptions = (Array.isArray(userInfo?.departments) ? userInfo.departments : []).map((department) => ({
         ...department,
         name: department?.companyName || department?.company || selectedCompany,
         class: department?.class || department?.dept_class || department?.name || '',
       }))
+  const assignments = [...assignmentOptions, ...departmentOptions]
 
   const filteredAssignments = selectedCompany && !includeAllCompanies
     ? assignments.filter((assignment) => String(assignment?.name || '').trim() === selectedCompany)
@@ -59,6 +59,19 @@ const getCompanyOptionsFromUserInfo = (userInfo) => {
   const optionMap = new Map()
 
   const addOption = (raw) => {
+    if (typeof raw === 'string') {
+      const name = raw.trim()
+      if (!name || optionMap.has(name)) return
+
+      optionMap.set(name, {
+        id: '',
+        code: '',
+        name,
+        isPrimary: 0,
+      })
+      return
+    }
+
     const name = String(
       raw?.name ||
       raw?.companyName ||
