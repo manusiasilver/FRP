@@ -17,6 +17,26 @@ function mapJobLevel(name) {
     return name;
 }
 
+function buildCompanyRecord(id, code, name, isPrimary = 0) {
+    const companyId = String(id || '').trim();
+    const rawCode = String(code || '').trim();
+    const rawName = String(name || '').trim();
+
+    if (!companyId && !rawCode && !rawName) {
+        return null;
+    }
+
+    const companyCode = normalizeCompanyCode(rawCode || rawName);
+    const companyName = normalizeCompanyName(rawCode || companyCode, rawName);
+
+    return {
+        id: companyId,
+        code: companyCode,
+        name: companyName,
+        is_primary: Number(isPrimary || 0),
+    };
+}
+
 function dbRowToDepartment(row) {
     return {
         id: row.id,
@@ -46,9 +66,27 @@ function dbRowsToEmployees(rows) {
 
         const entry = grouped.get(row.id);
 
-        const companyId = row.company_id || '';
-        const companyCode = normalizeCompanyCode(row.company_code || row.company_name);
-        const companyName = normalizeCompanyName(row.company_code, row.company_name);
+        const hasAssignedCompany =
+            Boolean(row.assigned_company_id) ||
+            Boolean(row.assigned_company_code) ||
+            Boolean(row.assigned_company_name);
+
+        const departmentCompany = buildCompanyRecord(
+            row.department_company_id ?? row.company_id,
+            row.department_company_code ?? row.company_code,
+            row.department_company_name ?? row.company_name,
+            hasAssignedCompany ? 0 : (row.department_is_primary || 0)
+        );
+        const assignedCompany = buildCompanyRecord(
+            row.assigned_company_id,
+            row.assigned_company_code,
+            row.assigned_company_name,
+            row.company_is_primary || 0
+        );
+
+        const companyId = departmentCompany?.id || assignedCompany?.id || '';
+        const companyCode = departmentCompany?.code || assignedCompany?.code || '';
+        const companyName = departmentCompany?.name || assignedCompany?.name || '';
 
         const departmentId = row.department_id || null;
         const departmentName = row.dept_name || '';
@@ -75,7 +113,33 @@ function dbRowsToEmployees(rows) {
             }
         }
 
-        if (companyId || companyCode || companyName) {
+        const addCompany = (company) => {
+            if (!company) return;
+
+            const companyKey = String(company.id || company.code || company.name);
+            const existing = entry.companyMap.get(companyKey);
+
+            if (existing) {
+                existing.id = existing.id || company.id;
+                existing.code = existing.code || company.code;
+                existing.name = existing.name || company.name;
+                existing.is_primary = Math.max(Number(existing.is_primary || 0), Number(company.is_primary || 0));
+                return;
+            }
+
+            entry.companyMap.set(companyKey, company);
+            entry.companies.push(company);
+        };
+
+        if (departmentCompany || assignedCompany) {
+            if (departmentCompany) {
+                addCompany(departmentCompany);
+            }
+
+            if (assignedCompany) {
+                addCompany(assignedCompany);
+            }
+        } else if (companyId || companyCode || companyName) {
             const companyKey = String(companyId || companyCode || companyName);
 
             if (!entry.companyMap.has(companyKey)) {
@@ -99,6 +163,10 @@ function dbRowsToEmployees(rows) {
             {};
 
         const primaryCompany =
+            companies.find(c => (
+                primaryDepartment.companyId &&
+                String(c.id || '') === String(primaryDepartment.companyId)
+            )) ||
             companies.find(c => Number(c.is_primary) === 1) ||
             companies[0] ||
             {};

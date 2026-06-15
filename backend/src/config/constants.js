@@ -21,15 +21,21 @@ const COMPANY_CODE_BY_NAME = Object.entries(COMPANY_MAP).reduce((acc, [code, nam
 const USER_SQL = `
     SELECT cu.id, cu.name, cu.email, cu.username, cu.job_position,
            cud.department_id,
+           cud.is_primary AS department_is_primary,
            md.name AS dept_name, md.class AS dept_class, md.code AS dept_code,
-           COALESCE(mc.id, uc.id) AS company_id,
-           COALESCE(mc.code, uc.code) AS company_code, COALESCE(mc.name, uc.name) AS company_name,
+           mc.id AS department_company_id,
+           mc.code AS department_company_code,
+           mc.name AS department_company_name,
+           cuc.company_id AS assigned_company_id,
+           uc.code AS assigned_company_code,
+           uc.name AS assigned_company_name,
+           COALESCE(cuc.is_primary, 0) AS company_is_primary,
            mjl.name AS job_level_name, mjl.level AS job_level_rank
     FROM central_users cu
     LEFT JOIN central_user_departments cud ON cud.user_id = cu.id
     LEFT JOIN master_departments md ON cud.department_id = md.id
     LEFT JOIN master_companies mc ON md.company_id = mc.id
-    LEFT JOIN central_user_companies cuc ON cuc.user_id = cu.id AND cud.department_id IS NULL
+    LEFT JOIN central_user_companies cuc ON cuc.user_id = cu.id
     LEFT JOIN master_companies uc ON cuc.company_id = uc.id
     LEFT JOIN master_job_levels mjl ON cu.job_level_id = mjl.id
     WHERE cu.is_active = 1
@@ -44,12 +50,17 @@ const USER_DEPARTEMENT_SQL = `
     cu.username, 
     cu.job_position,
     cud.department_id,
+    cud.is_primary AS department_is_primary,
     md.name AS dept_name, 
     md.class AS dept_class, 
     md.code AS dept_code,
-    COALESCE(mc.id, uc.id) AS company_id,
-    COALESCE(mc.code, uc.code) AS company_code, 
-    COALESCE(mc.name, uc.name) AS company_name,
+    mc.id AS department_company_id,
+    mc.code AS department_company_code,
+    mc.name AS department_company_name,
+    cuc.company_id AS assigned_company_id,
+    uc.code AS assigned_company_code,
+    uc.name AS assigned_company_name,
+    COALESCE(cuc.is_primary, 0) AS company_is_primary,
     mjl.name AS job_level_name, 
     mjl.level AS job_level_rank
 FROM central_users cu
@@ -61,7 +72,6 @@ LEFT JOIN master_companies mc
     ON md.company_id = mc.id
 LEFT JOIN central_user_companies cuc 
     ON cuc.user_id = cu.id 
-    AND cud.department_id IS NULL
 LEFT JOIN master_companies uc 
     ON cuc.company_id = uc.id
 LEFT JOIN master_job_levels mjl 
@@ -93,10 +103,13 @@ const LOGIN_SQL = `
         md.class AS dept_class,
         md.code AS dept_code,
 
-        COALESCE(mc.id, uc.id) AS company_id,
-        COALESCE(mc.code, uc.code) AS company_code,
-        COALESCE(mc.name, uc.name) AS company_name,
-        COALESCE(cuc.is_primary, 1) AS company_is_primary,
+        mc.id AS department_company_id,
+        mc.code AS department_company_code,
+        mc.name AS department_company_name,
+        cuc.company_id AS assigned_company_id,
+        uc.code AS assigned_company_code,
+        uc.name AS assigned_company_name,
+        COALESCE(cuc.is_primary, 0) AS company_is_primary,
 
         mjl.name AS job_level_name,
         mjl.level AS job_level_rank

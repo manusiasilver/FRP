@@ -42,6 +42,44 @@ const getEmployeeAssignments = e => {
   return []
 }
 
+const buildCompanySelectOptions = (user, fallbackCompanies = [], isAdmin = false) => {
+  const optionMap = new Map()
+  const source = isAdmin ? fallbackCompanies : (Array.isArray(user?.companies) ? user.companies : [])
+
+  const addCompany = raw => {
+    if (!raw) return
+
+    const name = String(raw.name || raw.companyName || raw.company || raw.label || raw.value || '').trim()
+    if (!name || optionMap.has(name)) return
+
+    const code = raw.code || raw.companyCode || ''
+    optionMap.set(name, {
+      value: name,
+      label: name,
+      keywords: `${name} ${code}`.trim(),
+      isPrimary: raw.is_primary ?? raw.isPrimary ?? 0,
+    })
+  }
+
+  source.forEach(addCompany)
+
+  if (optionMap.size === 0 && user?.selectedCompany) {
+    addCompany({
+      name: user.selectedCompany,
+      code: user.selectedCompanyCode,
+      is_primary: 1,
+    })
+  }
+
+  return [...optionMap.values()].sort((a, b) => {
+    if (!isAdmin && Number(b.isPrimary || 0) !== Number(a.isPrimary || 0)) {
+      return Number(b.isPrimary || 0) - Number(a.isPrimary || 0)
+    }
+
+    return a.label.localeCompare(b.label, 'id')
+  })
+}
+
 const getDefaultItems = () => [{ memo: '', budgetId: '', qty: '1', hargaSatuan: '0' }]
 
 const blankForm = {
@@ -276,7 +314,7 @@ export default function NewFRP() {
     frpService.getFormData(query)
       .then(async data => {
         setFrpData(data)
-      setUser(data?.user)
+      setUser(data?.user, { replaceSelection: true })
         const isDuplicate = searchParams.get('duplicate') === '1' || searchParams.get('duplicate') === 'true'
         const initial = buildInitialForm(data, isDuplicate)
         previousCompanyRef.current = initial.companyName || ''
@@ -362,9 +400,11 @@ export default function NewFRP() {
   // Backend sudah filter berdasarkan user scope — frontend hanya filter by company
   const departments = useMemo(() => {
     const target = normalizeCompany(values.companyName)
-    return (FRP.departments || [])
-      .filter(d => !target || normalizeCompany(d.company) === target)
+    const allDepartments = (FRP.departments || [])
       .map(d => ({ ...d, label: d.class ? `${d.name} - ${d.class}` : d.name }))
+    const matchedDepartments = allDepartments.filter(d => !target || normalizeCompany(d.company) === target)
+
+    return (matchedDepartments.length > 0 ? matchedDepartments : allDepartments)
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [FRP.departments, values.companyName])
 
@@ -372,7 +412,7 @@ export default function NewFRP() {
     if (!activeUser) return
 
     setValues(prev => {
-      const nextCompany = activeUser.selectedCompany || prev.companyName || ''
+      const nextCompany = prev.companyName || activeUser.selectedCompany || ''
       const nextDivision = activeUser.selectedDivision || prev.divisi || ''
       const matchedDivision = departments.find(d =>
         String(d.originalIndex) === String(nextDivision) ||
@@ -437,7 +477,9 @@ export default function NewFRP() {
 
   const getDefaultDepartmentForCompany = (companyName) => {
     const target = normalizeCompany(companyName)
-    return (FRP.departments || []).find(d => !target || normalizeCompany(d.company) === target) || null
+    return (FRP.departments || []).find(d => !target || normalizeCompany(d.company) === target) ||
+      (FRP.departments || [])[0] ||
+      null
   }
 
   const divisionSelectOptions = useMemo(
@@ -469,9 +511,13 @@ export default function NewFRP() {
   const budgetOptions = useMemo(() => {
     const selectedDept = departments.find(d => String(d.originalIndex) === String(values.divisi))
     const targetCompany = normalizeCompany(values.companyName)
+    const allBudgets = FRP.budgets || []
+    const companyBudgets = targetCompany
+      ? allBudgets.filter(b => normalizeCompany(b.company) === targetCompany)
+      : allBudgets
+    const scopedBudgets = targetCompany && companyBudgets.length > 0 ? companyBudgets : allBudgets
 
-    return (FRP.budgets || []).filter(b => {
-      if (targetCompany && normalizeCompany(b.company) !== targetCompany) return false
+    return scopedBudgets.filter(b => {
       if (!selectedDept) return true
       const bDeptId = String(b.department_id ?? b.departmentId ?? '')
       const dId = String(selectedDept.originalIndex ?? selectedDept.id ?? '')
@@ -521,11 +567,12 @@ export default function NewFRP() {
         : [...prev.checkDocs, doc],
     }))
 
-  const visibleCompanyField = activeUser?.role === 'administrator'
-        const companySelectOptions = useMemo(
-    () => (FRP.companies || []).map(company => ({ value: company.name, label: company.name })),
-    [FRP.companies],
+  const isAdmin = activeUser?.role === 'administrator'
+  const companySelectOptions = useMemo(
+    () => buildCompanySelectOptions(activeUser, FRP.companies || [], isAdmin),
+    [FRP.companies, activeUser, isAdmin],
   )
+  const visibleCompanyField = isAdmin || companySelectOptions.length > 1
   const employeeSelectOptions = useMemo(
     () => filteredEmployees.map(employee => ({ value: employee.fullName, label: employee.fullName })),
     [filteredEmployees],
@@ -644,7 +691,7 @@ export default function NewFRP() {
         frpId: values.id || undefined,
         fromRpId: values.fromRpId || undefined,
         
-        companyName: activeUser?.selectedCompany || values.companyName,
+        companyName: values.companyName || activeUser?.selectedCompany || '',
         divisi: selectedDept?.name || activeSelectedDept?.name || values.divisi || activeUser?.selectedDivision || '',
         kelas: selectedClass,
         departmentId: selectedDept?.id || selectedDept?.department_id || activeSelectedDept?.id || activeSelectedDept?.department_id || undefined,

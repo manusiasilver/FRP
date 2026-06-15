@@ -20,6 +20,44 @@ const getDisplayName = (user) => {
   return user?.name || user?.fullName || user?.username || user?.displayName || ''
 }
 
+const buildCompanySelectOptions = (user, fallbackCompanies = [], isAdmin = false) => {
+  const optionMap = new Map()
+  const source = isAdmin ? fallbackCompanies : (Array.isArray(user?.companies) ? user.companies : [])
+
+  const addCompany = raw => {
+    if (!raw) return
+
+    const name = String(raw.name || raw.companyName || raw.company || raw.label || raw.value || '').trim()
+    if (!name || optionMap.has(name)) return
+
+    const code = raw.code || raw.companyCode || ''
+    optionMap.set(name, {
+      value: name,
+      label: name,
+      keywords: `${name} ${code}`.trim(),
+      isPrimary: raw.is_primary ?? raw.isPrimary ?? 0,
+    })
+  }
+
+  source.forEach(addCompany)
+
+  if (optionMap.size === 0 && user?.selectedCompany) {
+    addCompany({
+      name: user.selectedCompany,
+      code: user.selectedCompanyCode,
+      is_primary: 1,
+    })
+  }
+
+  return [...optionMap.values()].sort((a, b) => {
+    if (!isAdmin && Number(b.isPrimary || 0) !== Number(a.isPrimary || 0)) {
+      return Number(b.isPrimary || 0) - Number(a.isPrimary || 0)
+    }
+
+    return a.label.localeCompare(b.label, 'id')
+  })
+}
+
 
 function FloatingGroup({ label, children, style, className }) {
   return (
@@ -273,7 +311,7 @@ export default function NewRP({
     rpService.getFormData(q)
       .then(d => {
         setData(d)
-        setUser(d?.user)
+        setUser(d?.user, { replaceSelection: true })
         const initial = buildInitialRp(d)
         setValues(initial)
         previousCompanyRef.current = initial.companyName || ''
@@ -306,16 +344,18 @@ export default function NewRP({
 
   // Backend already returns departments filtered to user's scope — just filter by selected company
   const departments = useMemo(() => {
-    return (D.departments || []).filter(
+    const matchedDepartments = (D.departments || []).filter(
       d => !values.companyName || normalizeCompany(d.company) === normalizeCompany(values.companyName)
     )
+
+    return matchedDepartments.length > 0 ? matchedDepartments : (D.departments || [])
   }, [D.departments, values.companyName])
 
   useEffect(() => {
     if (!activeUser) return
 
     setValues(prev => {
-      const nextCompany = activeUser.selectedCompany || prev.companyName || ''
+      const nextCompany = prev.companyName || activeUser.selectedCompany || ''
       const nextDivision = activeUser.selectedDivision || prev.divisi || ''
       const matchedDept = departments.find(d =>
         String(d.originalIndex) === String(nextDivision) ||
@@ -386,15 +426,21 @@ export default function NewRP({
   const getDefaultDepartmentForCompany = useCallback((companyName) => {
     return (D.departments || []).find(
       d => !companyName || normalizeCompany(d.company) === normalizeCompany(companyName)
-    ) || null
+    ) || (D.departments || [])[0] || null
   }, [D.departments])
 
   // Backend returns only budgets accessible to this user.
   // Frontend filters to selected company, then to selected division (unless that division has cross-budget access).
   const budgetOptions = useMemo(() => {
     const selectedDept = departments.find(d => String(d.originalIndex) === String(values.divisi))
-    return (D.budgets || []).filter(b => {
-      if (values.companyName && normalizeCompany(b.company) !== normalizeCompany(values.companyName)) return false
+    const targetCompany = normalizeCompany(values.companyName)
+    const allBudgets = D.budgets || []
+    const companyBudgets = targetCompany
+      ? allBudgets.filter(b => normalizeCompany(b.company) === targetCompany)
+      : allBudgets
+    const scopedBudgets = targetCompany && companyBudgets.length > 0 ? companyBudgets : allBudgets
+
+    return scopedBudgets.filter(b => {
       if (selectedDept?.canCrossBudget) return true   // HCGA/IT/etc. can use any budget
       if (!selectedDept) return true                  // no division selected yet — show all accessible
       const bClass = (b.class      || '').trim().toUpperCase()
@@ -405,9 +451,13 @@ export default function NewRP({
   }, [D.budgets, departments, values.divisi, values.companyName])
 
   // Companies and divisions — backend already shaped and scoped
-  const companyOptions  = D.companies  || []
+  const companyOptions = useMemo(
+    () => buildCompanySelectOptions(activeUser, D.companies || [], isAdmin),
+    [D.companies, activeUser, isAdmin],
+  )
   const divisionOptions = departments.map(d => ({ value: getDepartmentValue(d), label: d.label }))
   const processDivOptions = (D.processorDepts || []).map(d => ({ value: d, label: d }))
+  const canChangeCompany = isAdmin || companyOptions.length > 1
   const canChangeDivision = isAdmin || divisionOptions.length > 1
   const vendorOptions = useMemo(() => (D.vendors || []).map(v => ({ value: v.name, label: v.name })), [D.vendors])
   const kategoriOptions = ['Pengadaan Barang Baru', 'Pergantian Barang', 'Penambahan Barang'].map(k => ({ value: k, label: k }))
@@ -476,7 +526,7 @@ export default function NewRP({
     try {
       let payload = { 
         ...values,
-        companyName: activeUser?.selectedCompany || values.companyName,
+        companyName: values.companyName || activeUser?.selectedCompany || '',
         purchaseCategory: values.kategoriPembelian,
         description: values.deskripsi,
         processedByDepartment: values.diprosesOleh,
@@ -566,7 +616,7 @@ export default function NewRP({
                 </h3>
                 <div className="frp-grid-2">
                   <FloatingGroup label="Company Name">
-                    {isAdmin && companyOptions.length > 0 ? (
+                    {canChangeCompany ? (
                       <SearchableSelect
                         name="companyName"
                         value={values.companyName}

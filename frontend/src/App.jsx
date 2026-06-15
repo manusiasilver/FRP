@@ -36,13 +36,13 @@ function AuthBootstrap({ children }) {
         const user = await consumeTokenFromUrl()
 
         if (!cancelled && user) {
-          setUser(user)
+          setUser(user, { replaceSelection: true })
         }
 
         if (!cancelled && !user) {
           const sessionUser = await fetchAuthUserFromSession()
           if (!cancelled && sessionUser) {
-            setUser(sessionUser)
+            setUser(sessionUser, { replaceSelection: true })
           } else {
             const storedUser = getAuthUser()
             if (!cancelled && storedUser) {

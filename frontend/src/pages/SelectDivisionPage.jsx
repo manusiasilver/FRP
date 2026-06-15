@@ -49,7 +49,46 @@ const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
     }, index + classIndex))
   })
 
-  return [...new Map(divisions.map((division) => [`${division.name}::${division.class}`, division])).values()]
+  const optionMap = new Map(divisions.map((division) => [`${division.name}::${division.class}`, division]))
+
+  if (includeAllCompanies && divisions.length > 0) {
+    const companyMap = new Map()
+
+    ;[
+      ...(Array.isArray(userInfo?.companies) ? userInfo.companies : []),
+      ...(Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []),
+      ...(Array.isArray(userInfo?.departments) ? userInfo.departments : []),
+    ].forEach((raw) => {
+      const name = String(raw?.name || raw?.companyName || raw?.company || '').trim()
+      if (!name || companyMap.has(name)) return
+
+      companyMap.set(name, {
+        id: raw?.companyId || raw?.id || '',
+        code: raw?.companyCode || raw?.code || '',
+        name,
+      })
+    })
+
+    const templates = [...new Map(divisions.map((division) => [division.class, division])).values()]
+    companyMap.forEach((company) => {
+      const hasCompanyDivision = [...optionMap.values()].some((division) => division.name === company.name)
+      if (hasCompanyDivision) return
+
+      templates.forEach((template) => {
+        optionMap.set(`${company.name}::${template.class}`, {
+          ...template,
+          id: company.id || template.id,
+          code: company.code || template.code,
+          name: company.name,
+          companyId: company.id || template.companyId,
+          companyCode: company.code || template.companyCode,
+          companyName: company.name,
+        })
+      })
+    })
+  }
+
+  return [...optionMap.values()]
 }
 
 const getCompanyOptionsFromUserInfo = (userInfo) => {

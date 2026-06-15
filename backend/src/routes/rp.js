@@ -33,11 +33,24 @@ function normalizeScopeText(value) {
     return String(value || '').trim().toUpperCase();
 }
 
+function findUserCompany(user, requestedCompany) {
+    const target = normalizeScopeText(requestedCompany);
+    if (!target) return null;
+
+    return (user.companies || []).find(company =>
+        normalizeScopeText(company.name) === target ||
+        normalizeScopeText(company.companyName) === target ||
+        normalizeScopeText(company.code) === target ||
+        String(company.id || company.companyId || '') === String(requestedCompany || '')
+    ) || null;
+}
+
 function resolveRequestDepartmentSnapshot(baseSnapshot, user, body = {}) {
     const requestedClass = body.classClass || body.class || body.departmentClass || body.kelas || '';
     const requestedName = body.className || body.divisi || body.departmentName || '';
     const requestedId = body.classId || body.departmentId || '';
     const requestedCompany = body.companyName || user.selectedCompany || baseSnapshot.companyName || '';
+    const requestedCompanyRecord = findUserCompany(user, requestedCompany);
     const assignments = Array.isArray(user.allAssignments) ? user.allAssignments : [];
 
     const match = assignments.find((assignment) => {
@@ -78,9 +91,9 @@ function resolveRequestDepartmentSnapshot(baseSnapshot, user, body = {}) {
 
     return {
         ...baseSnapshot,
-        companyId: match?.companyId || match?.company_id || match?.id || baseSnapshot.companyId,
-        companyCode: match?.companyCode || match?.company_code || match?.code || baseSnapshot.companyCode,
-        companyName: match?.name || requestedCompany || baseSnapshot.companyName,
+        companyId: match?.companyId || match?.company_id || match?.id || requestedCompanyRecord?.id || requestedCompanyRecord?.companyId || baseSnapshot.companyId,
+        companyCode: match?.companyCode || match?.company_code || match?.code || requestedCompanyRecord?.code || requestedCompanyRecord?.companyCode || baseSnapshot.companyCode,
+        companyName: match?.name || requestedCompanyRecord?.name || requestedCompanyRecord?.companyName || requestedCompany || baseSnapshot.companyName,
         departmentId: requestedId || match?.department_id || match?.departmentId || match?.dept_id || baseSnapshot.departmentId,
         departmentName: selectedName,
         departmentClass: selectedClass,

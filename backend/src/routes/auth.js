@@ -156,9 +156,10 @@ router.get('/select-division', checkAuth, (req, res) => {
 
 router.post('/select-division', checkAuth, (req, res) => {
     const user = req.session.user;
-    const assignment = findAssignment(user, req.body.company || user.selectedCompany, req.body.division);
-    if (assignment) {
-        applySelectedAssignment(req, assignment, req.body.company, req.body.division);
+    const requestedCompany = req.body.company || user.selectedCompany;
+    const assignment = findAssignment(user, requestedCompany, req.body.division);
+    if (assignment || findCompany(user, requestedCompany)) {
+        applySelectedAssignment(req, assignment, requestedCompany, req.body.division);
     }
     res.redirect('/');
 });
@@ -272,9 +273,10 @@ router.get('/api/data/select-division', checkAuth, (req, res) => {
 router.post('/api/auth/select-division', checkAuth, (req, res) => {
     const user = req.session.user;
     const div = req.body.division;
-    const assignment = findAssignment(user, req.body.company || user.selectedCompany, div);
-    if (assignment) {
-        applySelectedAssignment(req, assignment, req.body.company, div);
+    const requestedCompany = req.body.company || user.selectedCompany;
+    const assignment = findAssignment(user, requestedCompany, div);
+    if (assignment || findCompany(user, requestedCompany)) {
+        applySelectedAssignment(req, assignment, requestedCompany, div);
     }
     res.json({
         success: true,
