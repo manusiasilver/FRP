@@ -20,23 +20,191 @@ function formatCurrency(value) {
   return `IDR ${value.toLocaleString('id-ID')}`
 }
 
+function getFrpDescription(request) {
+  return request?.frp_description || '-'
+}
+
+function getRequestValue(request, ...keys) {
+  for (const key of keys) {
+    const value = request?.[key]
+    if (value !== undefined && value !== null && value !== '') {
+      return value
+    }
+  }
+  return ''
+}
+
+function DivisionBadge({ division }) {
+  if (!division) return null
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        maxWidth: '100%',
+        background: '#e0e7ef',
+        color: '#334155',
+        borderRadius: '999px',
+        padding: '2px 8px',
+        fontSize: '11px',
+        fontWeight: 700,
+        lineHeight: 1.2,
+        whiteSpace: 'nowrap',
+      }}
+      title={division}
+    >
+      {division}
+    </span>
+  )
+}
+
+function DocTypeCell({ request }) {
+  const externalDocumentType = getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type')
+  const externalDocumentNumber = getRequestValue(request, 'externalDocumentNumber', 'extDocNumber', 'ext_doc_number')
+  const internalPoNumber = getRequestValue(request, 'internalPoNumber', 'internal_po_number')
+
+  const details = [
+    { label: 'Doc Type', value: externalDocumentType || '-' },
+    { label: 'Doc Num', value: externalDocumentNumber || '-' },
+    { label: 'Int PO Num', value: internalPoNumber || '-' },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+      {details.map((item) => (
+        <div
+          key={item.label}
+          style={{
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '4px',
+            fontSize: '11px',
+            lineHeight: 1.3,
+          }}
+        >
+          <span style={{ flexShrink: 0, fontWeight: 700, color: '#64748b' }}>
+            {item.label}
+          </span>
+          <span style={{ flexShrink: 0, color: '#94a3b8' }}>:</span>
+          <span
+            title={item.value}
+            style={{
+              minWidth: 0,
+              color: '#334155',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {item.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PaymentDetailsCell({ request }) {
+  const destinationBank = getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank')
+  const destinationBankAccount = getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account')
+
+  const details = [
+    { label: 'Destination Bank', value: destinationBank || '-' },
+    { label: 'Bank Account', value: destinationBankAccount || '-' },
+    { label: 'Total Amount', value: formatCurrency(request.amount || 0) },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+      {details.map((item) => (
+        <div
+          key={item.label}
+          style={{
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '4px',
+            fontSize: item.label === 'Total Amount' ? '11px' : '10.5px',
+            lineHeight: 1.3,
+          }}
+        >
+          <span style={{ flexShrink: 0, fontWeight: 700, color: '#64748b' }}>
+            {item.label}
+          </span>
+          <span style={{ flexShrink: 0, color: '#94a3b8' }}>:</span>
+          <span
+            title={item.value}
+            style={{
+              minWidth: 0,
+              color: item.label === 'Total Amount' ? '#0f172a' : '#334155',
+              fontFamily: item.label === 'Total Amount' ? 'IBM Plex Mono, monospace' : 'inherit',
+              fontWeight: item.label === 'Total Amount' ? 700 : 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {item.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const statusColors = {
   PENDING: { background: '#fef08a', color: '#854d0e' },
   APPROVED: { background: '#bbf7d0', color: '#166534' },
   REJECTED: { background: '#fecaca', color: '#991b1b' },
 }
 
+const statusIcons = {
+  PENDING: 'schedule',
+  APPROVED: 'check_circle',
+  REJECTED: 'cancel',
+}
+
+function StatusPill({ status }) {
+  const statusStyle = statusColors[status] || {}
+  const statusIcon = statusIcons[status] || 'info'
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        alignSelf: 'flex-start',
+        padding: '4px 10px',
+        borderRadius: '999px',
+        fontSize: '11px',
+        fontWeight: 700,
+        letterSpacing: '0.03em',
+        lineHeight: 1,
+        ...statusStyle,
+      }}
+    >
+      <span className="material-icons-round" style={{ fontSize: '14px', lineHeight: 1 }}>
+        {statusIcon}
+      </span>
+      <span>{status}</span>
+    </span>
+  )
+}
+
 const desktopHeaders = [
   { label: 'FRP Number', key: 'date' },
   { label: 'Requestor & Vendor', key: 'requester' },
-  { label: 'Division', key: 'division' },
-  { label: 'Total', key: 'amount' },
+  { label: 'Description', key: null },
+  { label: 'Doc Description', key: 'externalDocumentType' },
+  { label: 'Payment', key: 'amount' },
   { label: 'Status', key: 'status' },
-  { label: 'Attachment', key: null },
   { label: 'Action', key: null },
 ]
 
-const desktopColumnWidths = ['14%', '15%', '7%', '7%', '9%', '8%', '14%']
+const desktopColumnWidths = ['12%', '18%', '18%', '14%', '14%', '9%', '17%']
 
 export default function DataTableApprovalFrp({
   requests,
@@ -160,7 +328,8 @@ export default function DataTableApprovalFrp({
       <>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {requests.map((request) => {
-            const statusStyle = statusColors[request.status] || {}
+            const frpDescription = getFrpDescription(request)
+
             return (
               <div
                 key={request.id}
@@ -177,7 +346,7 @@ export default function DataTableApprovalFrp({
                       {copiedFrpId === request.id ? 'check' : 'content_copy'}
                     </span>
                   </button>
-                  <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, ...statusStyle }}>{request.status}</span>
+                  <StatusPill status={request.status} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginBottom: '12px' }}>
                   {[
@@ -185,6 +354,12 @@ export default function DataTableApprovalFrp({
                     { label: 'Pemohon', value: request.requesterName || '-' },
                     { label: 'Vendor', value: request.vendor || '-' },
                     { label: 'Divisi', value: request.division || '-' },
+                    { label: 'Doc Type', value: getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type') || '-' },
+                    { label: 'Ext Doc No', value: getRequestValue(request, 'externalDocumentNumber', 'extDocNumber', 'ext_doc_number') || '-' },
+                    { label: 'Internal PO', value: getRequestValue(request, 'internalPoNumber', 'internal_po_number') || '-' },
+                    { label: 'Payment', value: getRequestValue(request, 'paymentMethod', 'payment_method') || '-' },
+                    { label: 'Bank', value: getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank') || '-' },
+                    { label: 'Bank Account', value: getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account') || '-' },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.04em', marginBottom: '2px' }}>{label}</div>
@@ -194,6 +369,10 @@ export default function DataTableApprovalFrp({
                   <div style={{ gridColumn: '1 / -1' }}>
                     <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.04em', marginBottom: '2px' }}>Total</div>
                     <div style={{ fontSize: '14px', fontWeight: 700, fontFamily: 'IBM Plex Mono, monospace', color: '#0f172a' }}>{formatCurrency(request.amount || 0)}</div>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.04em', marginBottom: '2px' }}>Description</div>
+                    <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500, lineHeight: 1.5, whiteSpace: 'normal', wordBreak: 'break-word' }}>{frpDescription}</div>
                   </div>
                   {/* {isApprovedView && request.approvedBy && (
                     <div style={{ gridColumn: '1 / -1' }}>
@@ -312,10 +491,10 @@ export default function DataTableApprovalFrp({
             </colgroup>
             <tbody>
               {requests.length > 0 ? requests.map((request, idx) => {
-                const statusStyle = statusColors[request.status] || {}
                 const absoluteIndex = (safeCurrentPage - 1) * rowsPerPage + idx
                 const rowBg = absoluteIndex % 2 === 0 ? 'white' : '#fafbfc'
                 const isExpanded = expandedRowId === request.id
+                const frpDescription = getFrpDescription(request)
 
                 const td = {
                   padding: '14px 16px',
@@ -401,69 +580,50 @@ export default function DataTableApprovalFrp({
                         <DataTableIdentity
                           title={request.requesterName || '-'}
                           subtitle={request.vendor || '-'}
+                          badge={<DivisionBadge division={request.division} />}
                         />
                       </td>
 
-                      {/* 3. Divisi */}
+                      {/* 3. Description */}
+                      <td style={td}>
+                        <div
+                          title={frpDescription !== '-' ? frpDescription : undefined}
+                          style={{
+                            color: '#334155',
+                            fontSize: '12px',
+                            lineHeight: 1.5,
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-word',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {frpDescription}
+                        </div>
+                      </td>
+
+                      {/* 4. Doc Type */}
                       <td style={{ ...td, whiteSpace: 'normal' }}>
-                        <span style={{ background: '#e0e7ef', color: '#334155', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 600, display: 'inline-block', maxWidth: '100%', wordBreak: 'break-word' }}>
-                          {request.division}
-                        </span>
+                        <DocTypeCell request={request} />
                       </td>
 
-                      {/* 4. Total */}
-                      <td style={{ ...td, fontFamily: 'IBM Plex Mono, monospace', fontWeight: 700, color: '#0f172a', wordBreak: 'break-word' }}>
-                        {formatCurrency(request.amount || 0)}
+                      {/* 5. Payment Details */}
+                      <td style={{ ...td, whiteSpace: 'normal' }}>
+                        <PaymentDetailsCell request={request} />
                       </td>
 
-                      {/* 5. Status */}
+                      {/* 6. Status */}
                       <td style={td}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ alignSelf: 'flex-start', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.03em', ...statusStyle }}>
-                            {request.status}
-                          </span>
+                          <StatusPill status={request.status} />
                           {isApprovedView && request.approvedBy ? (
                             <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4, wordBreak: 'break-word' }}>
                               <span style={{ fontWeight: 700, color: '#475569' }}>By:</span> {request.approvedBy}
                             </div>
                           ) : null}
                         </div>
-                      </td>
-
-                      {/* 6. Attach */}
-                      <td style={td}>
-                        {request.attachLink ? (
-                          <a
-                            href={`/api/frp/${request.id}/attachment`}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '4px',
-                              background: 'white', color: '#3b82f6',
-                              border: '1px solid #bfdbfe', padding: '6px 10px',
-                              borderRadius: '24px', cursor: 'pointer',
-                              fontWeight: 600, fontSize: '11px', textDecoration: 'none',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#eff6ff'
-                              e.currentTarget.style.borderColor = '#93c5fd'
-                              e.currentTarget.style.boxShadow = '0 2px 4px rgba(59,130,246,0.1)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'white'
-                              e.currentTarget.style.borderColor = '#bfdbfe'
-                              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)'
-                            }}
-                          >
-                            <span className="material-icons-round" style={{ fontSize: '14px' }}>description</span>
-                            Dokumen
-                          </a>
-                        ) : (
-                          <span style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>-</span>
-                        )}
                       </td>
 
                       {/* 7. Action */}

@@ -301,6 +301,7 @@ function Sidebar({
   const resolvedUserName = userName || sessionUserInfo?.name || sessionUserInfo?.fullName || sessionUserInfo?.username || 'User'
   const resolvedUserDivision = userDivision || sessionUserInfo?.selectedDivision || sessionUserInfo?.department || ''
   const resolvedUserJobLevel = userJobLevel || sessionUserInfo?.selectedJobLevel || sessionUserInfo?.job_level || sessionUserInfo?.jobLevelName || ''
+  const resolvedUserJobPosition = sessionUserInfo?.job_position || sessionUserInfo?.jobPosition || ''
   const resolvedUserRole = userRole || sessionUserInfo?.role || 'staff'
   const resolvedIsAdmin = userIsAdmin || sessionUserInfo?.role === 'administrator'
   const resolvedAssignments = (Array.isArray(allAssignments) && allAssignments.length > 0)
@@ -510,9 +511,9 @@ function Sidebar({
 
   const initials = getInitials(resolvedUserName)
   
-  const displayedRole = resolvedUserDivision && resolvedUserJobLevel
-    ? `${resolvedUserDivision} ${resolvedUserJobLevel}`
-    : (resolvedUserJobLevel || resolvedUserDivision || resolvedUserRole || (resolvedIsAdmin ? 'Administrator' : 'Staff'))
+  const displayedRole = resolvedUserJobPosition || resolvedUserJobLevel || resolvedUserRole || (resolvedIsAdmin ? 'Administrator' : 'Staff')
+
+
 
   return (
     <>

@@ -180,6 +180,36 @@ export default function ButtonActionApprovalFrp({
                     <span className="material-icons-round" style={{ fontSize: '16px' }}>info</span>
                     Detail
                   </button>
+                  {request.attachLink ? (
+                    <a
+                      href={`/api/frp/${request.id}/attachment`}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => { e.stopPropagation(); setDropdownOpen(false) }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '8px 12px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        color: '#2563eb',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        textAlign: 'left',
+                        textDecoration: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span className="material-icons-round" style={{ fontSize: '16px' }}>description</span>
+                      Dokumen
+                    </a>
+                  ) : null}
                 </div>
               )}
             </div>

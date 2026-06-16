@@ -604,6 +604,7 @@ async function sendFrpApprovalView(req, res, forcedView, section = 'full') {
         if (search) {
             all = all.filter(r =>
                 (r.frpNo       || '').toLowerCase().includes(search) ||
+                (r.frpDescription || '').toLowerCase().includes(search) ||
                 (r.vendor      || '').toLowerCase().includes(search) ||
                 (r.dimintaOleh || '').toLowerCase().includes(search) ||
                 (r.divisi      || '').toLowerCase().includes(search) ||
@@ -659,6 +660,7 @@ async function sendFrpApprovalView(req, res, forcedView, section = 'full') {
             requesterName: r.dimintaOleh,
             vendor:        r.vendor,
             division:      r.divisi,
+            frp_description: r.frpDescription,
             amount:        r.total,
             approvedBy:    r.approvedBy,
             attachLink:    r.attachLink,
@@ -667,14 +669,14 @@ async function sendFrpApprovalView(req, res, forcedView, section = 'full') {
             // Detail dialog fields
             checkDocs:        r.checkDocs,
             companyName:      r.companyName,
-            keteranganFrp:    r.keteranganFrp,
+            keteranganFrp:    r.frpDescription,
             internalPoNumber: r.internalPoNumber,
-            extDocType:       r.extDocType,
-            extDocNumber:     r.extDocNumber,
+            extDocType:       r.extDocType || r.externalDocumentType || '',
+            extDocNumber:     r.extDocNumber || r.externalDocumentNumber || '',
             paymentMethod:    r.paymentMethod,
             paymentDate:      r.paymentDate,
-            bankTujuan:       r.bankTujuan,
-            rekBankTujuan:    r.rekBankTujuan,
+            bankTujuan:       r.bankTujuan || r.destinationBank || '',
+            rekBankTujuan:    r.rekBankTujuan || r.destinationBankAccount || '',
             rpReference:      r.rpReference,
         }));
 
