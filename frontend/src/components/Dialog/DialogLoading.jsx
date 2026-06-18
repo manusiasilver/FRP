@@ -1,12 +1,22 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import BackgroundDialog from '../template/BackgroundDialog'
+
+function formatLoadingLabel(label) {
+  if (!label) return 'Memuat...'
+
+  const trimmedLabel = label.trim()
+  if (!trimmedLabel) return 'Memuat...'
+  if (trimmedLabel.endsWith('...') || /[.!?]$/.test(trimmedLabel)) return trimmedLabel
+
+  return `${trimmedLabel}...`
+}
 
 export default function DialogLoading({
   isOpen = false,
   eyebrow = 'Mohon Tunggu',
   title = 'Sedang Memproses',
   message = 'Permintaan Anda sedang diproses. Mohon tunggu sebentar.',
+  statusLabel,
   cancelLabel = 'Batal',
   confirmLabel = 'Ya, Lanjutkan',
   icon = 'help',
@@ -68,13 +78,15 @@ export default function DialogLoading({
     }
   }[tone] || {}
 
-  const iconStyles = {
-    approve: { background: '#dcfce7', color: '#15803d' },
-    reject: { background: '#fee2e2', color: '#dc2626' },
-    warning: { background: '#fef3c7', color: '#92400e' },
-    primary: { background: '#dbeafe', color: '#1e40af' },
-    danger: { background: '#fee2e2', color: '#dc2626' },
-  }[tone] || { background: '#dbeafe', color: '#1e40af' }
+  const loadingAccent = {
+    approve: '#15803d',
+    reject: '#dc2626',
+    warning: '#d97706',
+    primary: '#49b6aa',
+    danger: '#dc2626',
+  }[tone] || '#49b6aa'
+
+  const loadingHeading = formatLoadingLabel(statusLabel || title)
 
   const handleOverlayClick = () => {
     if (canClose) onClose?.()
@@ -89,27 +101,27 @@ export default function DialogLoading({
         aria-labelledby="confirm-dialog-title"
         onClick={(event) => event.stopPropagation()}
         style={{
-          width: 'min(560px, calc(100vw - 32px))',
+          width: 'min(480px, calc(100vw - 24px))',
           maxHeight: '90vh',
           margin: 'auto',
-          borderRadius: '28px',
+          borderRadius: '24px',
           overflow: 'hidden',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 32px 96px rgba(15, 23, 42, 0.28)',
+          background: '#ffffff',
+          border: '1px solid rgba(148, 163, 184, 0.32)',
+          boxShadow: '0 26px 80px rgba(15, 23, 42, 0.32)',
         }}
       >
-        <BackgroundDialog />
-
         <div
           className="dashboard-popup__header"
           style={{
-            padding: '16px 18px',
+            padding: '20px 22px 18px',
             position: 'relative',
             zIndex: 1,
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: '12px',
           }}
@@ -129,8 +141,8 @@ export default function DialogLoading({
               style={{
                 flexShrink: 0,
                 backdropFilter: 'blur(10px)',
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.16)',
               }}
             >
               <span className="material-icons-round" style={{ fontSize: '18px' }}>close</span>
@@ -143,51 +155,61 @@ export default function DialogLoading({
           style={{
             position: 'relative',
             zIndex: 1,
-            padding: '0 18px 18px',
+            padding: '34px 24px 30px',
+            background: '#ffffff',
           }}
         >
           <div
             style={{
               display: 'grid',
               justifyItems: 'center',
-              gap: '14px',
-              padding: '28px 20px',
-              borderRadius: '22px',
-              background: 'rgba(255,255,255,0.72)',
-              border: '1px solid rgba(226, 232, 240, 0.9)',
-              boxShadow: '0 10px 28px rgba(15, 23, 42, 0.06)',
-              backdropFilter: 'blur(8px)',
+              gap: '16px',
+              padding: '0',
               textAlign: 'center',
             }}
+            role="status"
+            aria-live="polite"
           >
             <div
               style={{
-                width: '72px',
-                height: '72px',
-                borderRadius: '24px',
+                width: '56px',
+                height: '56px',
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                ...iconStyles,
-                boxShadow: '0 10px 20px rgba(15, 23, 42, 0.08)',
+                color: loadingAccent,
               }}
             >
               <span
                 className="material-icons-round dashboard-popup__spinner"
                 style={{ fontSize: '34px' }}
               >
-                progress_activity
+                autorenew
               </span>
             </div>
-            <div style={{ display: 'grid', gap: '0.55rem', minWidth: 0, width: '100%' }}>
+            <div style={{ display: 'grid', gap: '0.7rem', minWidth: 0, width: '100%' }}>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#243b77',
+                  fontSize: '1.1rem',
+                  lineHeight: 1.4,
+                  fontWeight: 700,
+                }}
+              >
+                {loadingHeading}
+              </p>
               <p
                 className="dashboard-popup__text"
-                style={{ margin: 0, lineHeight: 1.7, fontWeight: 600, color: '#0f172a' }}
+                style={{
+                  margin: '0 auto',
+                  maxWidth: '340px',
+                  lineHeight: 1.7,
+                  fontWeight: 500,
+                  color: '#31477f',
+                }}
               >
                 {message}
-              </p>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '0.95rem', lineHeight: 1.6 }}>
-                Sistem sedang menyiapkan data Anda.
               </p>
               {children}
             </div>
@@ -200,8 +222,8 @@ export default function DialogLoading({
             style={{
               position: 'relative',
               zIndex: 1,
-              padding: '16px 18px 18px',
-              background: 'linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(241, 245, 249, 0.96) 100%)',
+              padding: '0 24px 24px',
+              background: '#ffffff',
               borderTop: '1px solid rgba(226, 232, 240, 0.9)',
               gap: '10px',
             }}

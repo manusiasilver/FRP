@@ -5,6 +5,7 @@ const DEFAULT_DIALOG = {
   eyebrow: 'Mohon Tunggu',
   title: 'Memuat Halaman',
   message: 'Sistem sedang menyiapkan data halaman Anda.',
+  statusLabel: null,
   tone: 'primary',
 }
 
@@ -62,6 +63,7 @@ export function PageLoadingProvider({ children }) {
         eyebrow={activeDialog?.eyebrow ?? DEFAULT_DIALOG.eyebrow}
         title={activeDialog?.title ?? DEFAULT_DIALOG.title}
         message={activeDialog?.message ?? DEFAULT_DIALOG.message}
+        statusLabel={activeDialog?.statusLabel ?? DEFAULT_DIALOG.statusLabel}
         tone={activeDialog?.tone ?? DEFAULT_DIALOG.tone}
         isLoading
         allowClose={false}
@@ -84,6 +86,7 @@ export function usePageLoadingDialog(isOpen, options = {}) {
     eyebrow = DEFAULT_DIALOG.eyebrow,
     title = DEFAULT_DIALOG.title,
     message = DEFAULT_DIALOG.message,
+    statusLabel = DEFAULT_DIALOG.statusLabel,
     tone = DEFAULT_DIALOG.tone,
   } = options
 
@@ -93,11 +96,11 @@ export function usePageLoadingDialog(isOpen, options = {}) {
     const id = idRef.current
 
     if (isOpen) {
-      context.register(id, { eyebrow, title, message, tone })
+      context.register(id, { eyebrow, title, message, statusLabel, tone })
       return () => context.unregister(id)
     }
 
     context.unregister(id)
     return undefined
-  }, [context, eyebrow, isOpen, message, title, tone])
+  }, [context, eyebrow, isOpen, message, statusLabel, title, tone])
 }
