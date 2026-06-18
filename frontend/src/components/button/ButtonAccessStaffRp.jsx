@@ -19,6 +19,7 @@ export default function ButtonAccessStaffRp({
   showRevert = true,
   isStaff = false,
   userDivision = '',
+  canProcessThisRp = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
@@ -54,7 +55,11 @@ export default function ButtonAccessStaffRp({
   const canProcessDivision = PROCESS_ACCESS_DIVISIONS.has(normalizedUserDivision)
   const isDivisionProcess = rp.status === 'division_review'
   const isStaffFinalStage = isStaff && (rp.status === 'final_review' || rp.status === 'approved')
-  const showDivisionProcessActions = isDivisionProcess && canProcessDivision && typeof onCheckData === 'function'
+  const showDivisionProcessActions =
+    isDivisionProcess &&
+    canProcessDivision &&
+    canProcessThisRp &&
+    typeof onCheckData === 'function'
   const showRestrictedDivisionProcess = isDivisionProcess && !canProcessDivision
   const showRevertAction = showRevert && rp.canRevert
 

@@ -177,14 +177,49 @@ export function DataTableChips({ items = [], empty = '-', variant = 'app', class
   )
 }
 
-export function DataTableIdentity({ title, subtitle, initials, badge, className = '' }) {
+export function DataTableIdentity({
+  title,
+  subtitle,
+  initials,
+  badge,
+  className = '',
+  truncateTitle = false,
+}) {
+  const titleText =
+    typeof title === 'string' || typeof title === 'number' ? String(title) : undefined
+
   return (
-    <div className={['users-table__identity', className].filter(Boolean).join(' ')}>
+    <div
+      className={[
+        'users-table__identity',
+        truncateTitle ? 'users-table__identity--truncate' : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <span className="users-table__avatar">{initials || getInitials(title)}</span>
 
       <div className="users-table__identity-copy">
-        <div className="users-table__name-row">
-          <strong className="users-table__name">{title}</strong>
+        <div
+          className={[
+            'users-table__name-row',
+            truncateTitle ? 'users-table__name-row--truncate' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <strong
+            className={[
+              'users-table__name',
+              truncateTitle ? 'users-table__name--truncate' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            title={truncateTitle ? titleText : undefined}
+          >
+            {title}
+          </strong>
           {badge}
         </div>
 

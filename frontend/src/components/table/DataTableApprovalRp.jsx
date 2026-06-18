@@ -269,6 +269,13 @@ const clampTextStyle = {
   wordBreak: 'break-word',
 }
 
+const singleLineEllipsisStyle = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
 const desktopHeaders = [
   { label: 'FRP Number', key: 'date' },
   { label: 'Requestor & Vendor', key: 'creator' },
@@ -517,10 +524,10 @@ export default function DataTableRp({
                       style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}
                     >
                     {[
-                      ['Pemohon', rp.dibuatOleh || '-'],
-                      ['Vendor', rp.vendorSuggestion || '-'],
-                    ].map(([label, value]) => (
-                      <div key={label}>
+                      { label: 'Pemohon', value: rp.dibuatOleh || '-', truncate: true },
+                      { label: 'Vendor', value: rp.vendorSuggestion || '-' },
+                    ].map(({ label, value, truncate }) => (
+                      <div key={label} style={{ minWidth: 0 }}>
                         <div
                           style={{
                             fontSize: '10px',
@@ -533,7 +540,17 @@ export default function DataTableRp({
                         >
                           {label}
                         </div>
-                        <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500 }}>{value}</div>
+                        <div
+                          title={truncate && value !== '-' ? value : undefined}
+                          style={{
+                            fontSize: '13px',
+                            color: '#1e293b',
+                            fontWeight: 500,
+                            ...(truncate ? singleLineEllipsisStyle : {}),
+                          }}
+                        >
+                          {value}
+                        </div>
                       </div>
                     ))}
                     <div>
@@ -1071,6 +1088,7 @@ export default function DataTableRp({
                         className="approval-rp-identity"
                         title={rp.dibuatOleh || '-'}
                         subtitle={rp.vendorSuggestion || '-'}
+                        truncateTitle
                       />
                     </td>
                     {/* Divisi & Proses */}

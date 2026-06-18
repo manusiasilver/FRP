@@ -273,6 +273,13 @@ function StatusPill({ status }) {
   )
 }
 
+const singleLineEllipsisStyle = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
 const desktopHeaders = [
   { label: 'FRP Number', key: 'date' },
   { label: 'Requestor & Vendor', key: 'requester' },
@@ -456,7 +463,7 @@ export default function DataTableApprovalFrp({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginBottom: '12px' }}>
                   {[
                     { label: 'Tanggal', value: formatDate(request.date) },
-                    { label: 'Pemohon', value: formatDisplayValue(request.requesterName) },
+                    { label: 'Pemohon', value: formatDisplayValue(request.requesterName), truncate: true },
                     { label: 'Vendor', value: formatDisplayValue(request.vendor) },
                     { label: 'Divisi', value: formatDisplayValue(request.division) },
                     { label: 'Doc Type', value: formatDisplayValue(getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type')) },
@@ -465,10 +472,22 @@ export default function DataTableApprovalFrp({
                     { label: 'Payment', value: formatDisplayValue(getRequestValue(request, 'paymentMethod', 'payment_method')) },
                     { label: 'Bank', value: formatDisplayValue(getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank')) },
                     { label: 'Bank Account', value: formatDisplayValue(getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account')) },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
+                  ].map(({ label, value, truncate }) => (
+                    <div key={label} style={{ minWidth: 0 }}>
                       <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.04em', marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>{value}</div>
+                      <div
+                        title={truncate && value !== '-' ? value : undefined}
+                        style={{
+                          fontSize: '13px',
+                          color: '#1e293b',
+                          fontWeight: 500,
+                          whiteSpace: truncate ? 'nowrap' : 'normal',
+                          wordBreak: truncate ? 'normal' : 'break-word',
+                          ...(truncate ? singleLineEllipsisStyle : {}),
+                        }}
+                      >
+                        {value}
+                      </div>
                     </div>
                   ))}
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -686,6 +705,7 @@ export default function DataTableApprovalFrp({
                           title={formatDisplayValue(request.requesterName)}
                           subtitle={formatDisplayValue(request.vendor)}
                           badge={<DivisionBadge division={request.division} />}
+                          truncateTitle
                         />
                       </td>
 

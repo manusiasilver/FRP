@@ -225,6 +225,8 @@ select {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .profile-avatar {
@@ -258,11 +260,15 @@ select {
 }
 
 .profile-info {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .profile-name {
+  display: block;
+  max-width: 100%;
   margin: 0 0 2px;
   color: #fff;
   font-size: 0.95rem;
@@ -1843,7 +1849,12 @@ select {
   min-width: 220px;
 }
 
+.users-table__identity--truncate {
+  min-width: 0;
+}
+
 .users-table__identity-copy {
+  flex: 1 1 auto;
   display: grid;
   gap: 0.2rem;
   min-width: 0;
@@ -1876,6 +1887,19 @@ select {
   gap: 0.45rem;
   min-width: 0;
   flex-wrap: wrap;
+}
+
+.users-table__name-row--truncate {
+  flex-wrap: nowrap;
+}
+
+.users-table__name--truncate {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .users-table__meta {

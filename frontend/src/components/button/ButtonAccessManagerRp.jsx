@@ -13,6 +13,7 @@ export default function ButtonAccessManagerRp({
   requestAction,
   setSelected,
   showActions = true,
+  canProcessThisRp = false,
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })  
@@ -53,8 +54,12 @@ export default function ButtonAccessManagerRp({
   const canFinalApproveByDivision = !!userDivision && !!processDivision && userDivision === processDivision
 
   const canManagerApprove = rp.status === 'waiting_manager' && canTakeManagerAction
-  const canDivisionProcess = rp.status === 'division_review' && userJobLevelRank > 1
+  const canDivisionProcess = rp.status === 'division_review' && userJobLevelRank > 1 && canProcessThisRp
   const canFinalApprove = rp.status === 'final_review' && canTakeManagerAction && canFinalApproveByDivision
+  const showDivisionReviewDetailOnly =
+    rp.status === 'division_review' &&
+    userJobLevelRank > 1 &&
+    !canDivisionProcess
   const showRevertAction = rp.canRevert
   const showReadOnlyDropdown =
     !canTakeManagerAction &&
@@ -94,6 +99,21 @@ export default function ButtonAccessManagerRp({
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
         }}>
           <ButtonRevert disabled={actionLoading} onClick={() => requestAction(rp, 'revert')}>Revert</ButtonRevert>
+          <ButtonDetail onClick={() => setSelected(rp)}>Detail</ButtonDetail>
+        </div>
+      )}
+
+      {showDivisionReviewDetailOnly && (
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          background: '#f1f5f9',
+          border: '1px solid #e2e8f0',
+          borderRadius: '30px',
+          padding: '4px',
+          gap: '4px',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+        }}>
           <ButtonDetail onClick={() => setSelected(rp)}>Detail</ButtonDetail>
         </div>
       )}

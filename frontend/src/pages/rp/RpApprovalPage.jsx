@@ -785,7 +785,8 @@ export default function RpApprovalPage() {
               actionLoading={actionLoading}
               requestAction={requestAction}
               setSelected={setSelected}
-                showActions={true}
+              showActions={true}
+              canProcessThisRp={isAdmin || isProcessDivision(selected.diprosesOleh)}
               />
             ) : (
               <ButtonAccessStaffRp
@@ -799,6 +800,7 @@ export default function RpApprovalPage() {
                 showDetail={true}
                 showRevert={true}
                 isStaff={userJobLevelRank === 1}
+                canProcessThisRp={isAdmin || isProcessDivision(selected.diprosesOleh)}
               />
             )}
 

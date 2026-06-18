@@ -552,7 +552,7 @@ function Sidebar({
             </div>
 
             <div className="profile-info">
-              <h3 className="profile-name">{resolvedUserName}</h3>
+              <h3 className="profile-name" title={resolvedUserName}>{resolvedUserName}</h3>
               <p className="profile-role">{displayedRole}</p>
             </div>
           </div>

@@ -3,7 +3,7 @@ const { checkAuth } = require('../middleware/auth');
 const { readJson, writeJson } = require('../utils/json');
 const { getAllEmployees, getCompanies, getDepartmentRows, getDeptCode, getCompanyId, getDeptId, fetchAllFrpRequests, fetchAllRpRequests } = require('../services/dbService');
 const { sameCompanyName } = require('../utils/company');
-const { isRpInUserScope } = require('../middleware/scope');
+const { isRpInUserScope, canViewRpProcessDivision } = require('../middleware/scope');
 const db = require('../../db');
 const crypto = require('crypto');
 
@@ -1061,7 +1061,10 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
 
     const isApprovedScope = r => u.role === 'administrator' || (
         sameCompanyName(r.companyName, u.selectedCompany) &&
-        (r.divisi === u.selectedDivision || r.diprosesOleh === u.selectedDivision)
+        (
+            normalizeScopeText(r.divisi) === normalizeScopeText(u.selectedDivision || u.departmentClass) ||
+            canViewRpProcessDivision(u.selectedDivision || u.departmentClass, r.diprosesOleh || r.divisi)
+        )
     );
 
     // badge counts (sebelum view filter)
@@ -1095,7 +1098,10 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
     if (lookScope === 'own') {
         reqs = reqs.filter(r => sameCompanyName(r.companyName, u.selectedCompany) && r.divisi === u.selectedDivision);
     } else if (lookScope === 'processor' && !isPendingView) {
-        reqs = reqs.filter(r => sameCompanyName(r.companyName, u.selectedCompany) && r.diprosesOleh === u.selectedDivision);
+        reqs = reqs.filter(r =>
+            sameCompanyName(r.companyName, u.selectedCompany) &&
+            canViewRpProcessDivision(u.selectedDivision || u.departmentClass, r.diprosesOleh || r.divisi)
+        );
     }
 
     // enrich + total per request

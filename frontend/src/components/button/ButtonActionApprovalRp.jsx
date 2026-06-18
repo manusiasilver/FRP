@@ -30,6 +30,9 @@ export default function ButtonActionApprovalRp({
   const canTakeApprovalAction = userJobLevelRank >= 2 && !/\bstaff\b/.test(userJobLevelName)
   const isStaff = userJobLevelRank === 1
   const isAdmin = user?.role === 'administrator'
+  const canProcessThisRp =
+    isAdmin ||
+    (typeof isProcessDivision === 'function' && isProcessDivision(rp?.processedByDepartment || rp?.diprosesOleh))
 
   const canCreateFrp =
     rp.status === 'approved' &&
@@ -78,6 +81,7 @@ export default function ButtonActionApprovalRp({
           navigate={navigate}
           setSelected={setSelected}
           showActions={showActions}
+          canProcessThisRp={canProcessThisRp}
         />
       )}
 
@@ -93,6 +97,7 @@ export default function ButtonActionApprovalRp({
           showDetail={showDetail}
           showRevert={showRevert}
           isStaff={isStaff}
+          canProcessThisRp={canProcessThisRp}
         />
       )}
     </div>
