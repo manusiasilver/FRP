@@ -20,6 +20,14 @@ function formatCurrency(value) {
   return `IDR ${value.toLocaleString('id-ID')}`
 }
 
+function getBankLabel(request) {
+  return getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank')
+}
+
+function getAccountNumber(request) {
+  return getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account')
+}
+
 function getFrpDescription(request) {
   return request?.frp_description || '-'
 }
@@ -63,93 +71,124 @@ function DocTypeCell({ request }) {
   const externalDocumentType = getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type')
   const externalDocumentNumber = getRequestValue(request, 'externalDocumentNumber', 'extDocNumber', 'ext_doc_number')
   const internalPoNumber = getRequestValue(request, 'internalPoNumber', 'internal_po_number')
-
-  const details = [
-    { label: 'Doc Type', value: externalDocumentType || '-' },
-    { label: 'Doc Num', value: externalDocumentNumber || '-' },
-    { label: 'Int PO Num', value: internalPoNumber || '-' },
-  ]
+  const details = [externalDocumentType, externalDocumentNumber, internalPoNumber].filter(Boolean)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
-      {details.map((item) => (
-        <div
-          key={item.label}
-          style={{
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: '4px',
-            fontSize: '11px',
-            lineHeight: 1.3,
-          }}
-        >
-          <span style={{ flexShrink: 0, fontWeight: 700, color: '#64748b' }}>
-            {item.label}
-          </span>
-          <span style={{ flexShrink: 0, color: '#94a3b8' }}>:</span>
-          <span
-            title={item.value}
-            style={{
-              minWidth: 0,
-              color: '#334155',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {item.value}
-          </span>
-        </div>
-      ))}
+    <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div
+        title={details.length > 0 ? details.join(' | ') : undefined}
+        style={{
+          color: '#334155',
+          fontSize: '11px',
+          lineHeight: 1.45,
+          fontWeight: 600,
+          whiteSpace: 'normal',
+          wordBreak: 'break-word',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {details.length > 0 ? (
+          details.map((item, index) => (
+            <React.Fragment key={`${item}-${index}`}>
+              {index > 0 ? <span style={{ color: '#94a3b8', padding: '0 4px' }}>&bull;</span> : null}
+              <span>{item}</span>
+            </React.Fragment>
+          ))
+        ) : '-'}
+      </div>
     </div>
   )
 }
 
-function PaymentDetailsCell({ request }) {
-  const destinationBank = getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank')
-  const destinationBankAccount = getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account')
-
-  const details = [
-    { label: 'Destination Bank', value: destinationBank || '-' },
-    { label: 'Bank Account', value: destinationBankAccount || '-' },
-    { label: 'Total Amount', value: formatCurrency(request.amount || 0) },
-  ]
+function PaymentDetailsCell({ request, onCopyAccount, copiedAccountId }) {
+  const paymentLabel = getRequestValue(request, 'vendor', 'paymentMethod', 'payment_method')
+  const bankLabel = getBankLabel(request)
+  const accountNumber = getAccountNumber(request)
+  const amountLabel = formatCurrency(request.amount || 0)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
-      {details.map((item) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+      <div
+        title={bankLabel || paymentLabel || '-'}
+        style={{
+          minWidth: 0,
+          alignSelf: 'flex-start',
+          maxWidth: '100%',
+          padding: '3px 8px',
+          borderRadius: '999px',
+          background: '#eef2ff',
+          color: '#3730a3',
+          fontSize: '10.5px',
+          lineHeight: 1.3,
+          fontWeight: 700,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {bankLabel || paymentLabel || '-'}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minWidth: 0 }}>
         <div
-          key={item.label}
           style={{
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: '4px',
-            fontSize: item.label === 'Total Amount' ? '11px' : '10.5px',
+            flexShrink: 0,
+            padding: '3px 8px',
+            borderRadius: '999px',
+            background: '#f8fafc',
+            color: '#334155',
+            fontSize: '10.5px',
             lineHeight: 1.3,
+            fontWeight: 700,
+            fontFamily: 'IBM Plex Mono, monospace',
+            whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ flexShrink: 0, fontWeight: 700, color: '#64748b' }}>
-            {item.label}
-          </span>
-          <span style={{ flexShrink: 0, color: '#94a3b8' }}>:</span>
-          <span
-            title={item.value}
-            style={{
-              minWidth: 0,
-              color: item.label === 'Total Amount' ? '#0f172a' : '#334155',
-              fontFamily: item.label === 'Total Amount' ? 'IBM Plex Mono, monospace' : 'inherit',
-              fontWeight: item.label === 'Total Amount' ? 700 : 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {item.value}
-          </span>
+          {accountNumber || '-'}
         </div>
-      ))}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onCopyAccount(request.id, accountNumber)
+          }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '24px',
+            height: '24px',
+            borderRadius: '999px',
+            border: 'none',
+            background: 'transparent',
+            color: copiedAccountId === request.id ? '#15803d' : '#94a3b8',
+            cursor: accountNumber ? 'pointer' : 'default',
+            padding: 0,
+            flexShrink: 0,
+          }}
+          disabled={!accountNumber}
+          title={accountNumber ? 'Salin nomor rekening' : 'Nomor rekening tidak tersedia'}
+        >
+          <span className="material-icons-round" style={{ fontSize: '15px', lineHeight: 1 }}>
+            {copiedAccountId === request.id ? 'check' : 'content_copy'}
+          </span>
+        </button>
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '3px 8px',
+            borderRadius: '999px',
+            background: '#ecfdf5',
+            color: '#166534',
+            fontSize: '10.5px',
+            lineHeight: 1.3,
+            fontWeight: 700,
+            fontFamily: 'IBM Plex Mono, monospace',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {amountLabel}
+        </div>
+      </div>
     </div>
   )
 }
@@ -198,8 +237,8 @@ const desktopHeaders = [
   { label: 'FRP Number', key: 'date' },
   { label: 'Requestor & Vendor', key: 'requester' },
   { label: 'Description', key: null },
-  { label: 'Doc Description', key: 'externalDocumentType' },
   { label: 'Payment', key: 'amount' },
+  { label: 'Doc Description', key: 'externalDocumentType' },
   { label: 'Status', key: 'status' },
   { label: 'Action', key: null },
 ]
@@ -226,6 +265,7 @@ export default function DataTableApprovalFrp({
 }) {
   const [expandedRowId, setExpandedRowId] = useState(null)
   const [copiedFrpId, setCopiedFrpId] = useState(null)
+  const [copiedAccountId, setCopiedAccountId] = useState(null)
 
   const copyFrpNo = async (requestId, frpNo) => {
     if (!frpNo) return
@@ -248,6 +288,31 @@ export default function DataTableApprovalFrp({
       setCopiedFrpId(requestId)
       window.setTimeout(() => {
         setCopiedFrpId(current => (current === requestId ? null : current))
+      }, 1400)
+    } catch (_) { }
+  }
+
+  const copyAccountNumber = async (requestId, accountNumber) => {
+    if (!accountNumber) return
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(accountNumber)
+      } else {
+        const tempInput = document.createElement('textarea')
+        tempInput.value = accountNumber
+        tempInput.setAttribute('readonly', '')
+        tempInput.style.position = 'fixed'
+        tempInput.style.opacity = '0'
+        tempInput.style.pointerEvents = 'none'
+        document.body.appendChild(tempInput)
+        tempInput.focus()
+        tempInput.select()
+        document.execCommand('copy')
+        document.body.removeChild(tempInput)
+      }
+      setCopiedAccountId(requestId)
+      window.setTimeout(() => {
+        setCopiedAccountId(current => (current === requestId ? null : current))
       }, 1400)
     } catch (_) { }
   }
@@ -604,14 +669,18 @@ export default function DataTableApprovalFrp({
                         </div>
                       </td>
 
-                      {/* 4. Doc Type */}
+                      {/* 4. Payment Details */}
                       <td style={{ ...td, whiteSpace: 'normal' }}>
-                        <DocTypeCell request={request} />
+                        <PaymentDetailsCell
+                          request={request}
+                          onCopyAccount={copyAccountNumber}
+                          copiedAccountId={copiedAccountId}
+                        />
                       </td>
 
-                      {/* 5. Payment Details */}
+                      {/* 5. Doc Type */}
                       <td style={{ ...td, whiteSpace: 'normal' }}>
-                        <PaymentDetailsCell request={request} />
+                        <DocTypeCell request={request} />
                       </td>
 
                       {/* 6. Status */}

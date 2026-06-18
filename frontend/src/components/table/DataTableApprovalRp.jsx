@@ -133,6 +133,109 @@ function getRpDescription(rp) {
   return rp?.description || rp?.deskripsi || '-'
 }
 
+const ACCENT_PALETTES = [
+  { color: '#1d4ed8', soft: '#dbeafe', border: '#93c5fd' },
+  { color: '#0f766e', soft: '#ccfbf1', border: '#5eead4' },
+  { color: '#b45309', soft: '#fef3c7', border: '#fcd34d' },
+  { color: '#7c3aed', soft: '#ede9fe', border: '#c4b5fd' },
+  { color: '#be185d', soft: '#fce7f3', border: '#f9a8d4' },
+  { color: '#15803d', soft: '#dcfce7', border: '#86efac' },
+]
+
+function getAccentPalette(value) {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (!normalized || normalized === '-') {
+    return { color: '#64748b', soft: '#f1f5f9', border: '#cbd5e1' }
+  }
+
+  if (normalized === 'penambahan barang') {
+    return { color: '#1d4ed8', soft: '#dbeafe', border: '#93c5fd' }
+  }
+
+  if (normalized === 'pergantian barang') {
+    return { color: '#b45309', soft: '#fef3c7', border: '#fcd34d' }
+  }
+
+  if (normalized === 'pengadaan barang baru') {
+    return { color: '#15803d', soft: '#dcfce7', border: '#86efac' }
+  }
+
+  if (/(^|[^a-z])it([^a-z]|$)/.test(normalized)) {
+    return { color: '#0f766e', soft: '#ccfbf1', border: '#5eead4' }
+  }
+
+  if (normalized.includes('hcga') || normalized.includes('ga') || normalized.includes('hr')) {
+    return { color: '#be185d', soft: '#fce7f3', border: '#f9a8d4' }
+  }
+
+  if (normalized.includes('finance') || normalized.includes('accounting')) {
+    return { color: '#b45309', soft: '#fef3c7', border: '#fcd34d' }
+  }
+
+  if (normalized.includes('operational') || normalized.includes('operation')) {
+    return { color: '#1d4ed8', soft: '#dbeafe', border: '#93c5fd' }
+  }
+
+  let hash = 0
+  for (let i = 0; i < normalized.length; i++) {
+    hash = normalized.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return ACCENT_PALETTES[Math.abs(hash) % ACCENT_PALETTES.length]
+}
+
+function renderColoredLabel(value) {
+  const palette = getAccentPalette(value)
+  return (
+    <span
+      style={{
+        color: palette.color,
+        fontWeight: 700,
+      }}
+    >
+      {value || '-'}
+    </span>
+  )
+}
+
+function renderColoredSegments(value) {
+  const normalized = String(value || '-')
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (!normalized.length) {
+    return renderColoredLabel('-')
+  }
+
+  return normalized.map((part, index) => (
+    <React.Fragment key={`${part}-${index}`}>
+      {index > 0 ? <span style={{ color: '#94a3b8', fontWeight: 600 }}> / </span> : null}
+      {renderColoredLabel(part)}
+    </React.Fragment>
+  ))
+}
+
+function renderColoredCategories(value) {
+  const raw = String(value || '-').trim()
+  if (!raw || raw === '-') {
+    return renderColoredLabel('-')
+  }
+
+  const parts = raw.split(/([/,])/).map((part) => part.trim()).filter(Boolean)
+
+  return parts.map((part, index) => {
+    if (part === '/' || part === ',') {
+      return (
+        <span key={`separator-${index}`} style={{ color: '#94a3b8', fontWeight: 600 }}>
+          {part === ',' ? ', ' : ' / '}
+        </span>
+      )
+    }
+
+    return <React.Fragment key={`${part}-${index}`}>{renderColoredLabel(part)}</React.Fragment>
+  })
+}
+
 function renderInfoChip(value, palette = {}) {
   return (
     <span
@@ -410,13 +513,12 @@ export default function DataTableRp({
                     </div>
                     {renderStatus(rp.status)}
                   </div>
-                  <div
-                    style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}
-                  >
-                    {[ 
+                    <div
+                      style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}
+                    >
+                    {[
                       ['Pemohon', rp.dibuatOleh || '-'],
                       ['Vendor', rp.vendorSuggestion || '-'],
-                      ['Divisi & Proses', `${rp.divisi || '-'} (Process by ${rp.diprosesOleh || '-'})`],
                     ].map(([label, value]) => (
                       <div key={label}>
                         <div
@@ -434,6 +536,26 @@ export default function DataTableRp({
                         <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500 }}>{value}</div>
                       </div>
                     ))}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          color: '#94a3b8',
+                          letterSpacing: '0.04em',
+                          marginBottom: '2px',
+                        }}
+                      >
+                        Divisi & Proses
+                      </div>
+                      <div style={{ fontSize: '13px', lineHeight: 1.5 }}>
+                        <span style={{ color: '#1e293b', fontWeight: 500 }}>{rp.divisi || '-'}</span>
+                        <span style={{ color: '#64748b' }}> (Process by </span>
+                        {renderColoredSegments(rp.diprosesOleh || '-')}
+                        <span style={{ color: '#64748b' }}>)</span>
+                      </div>
+                    </div>
                     <div>
                       <div
                         style={{
@@ -743,7 +865,7 @@ export default function DataTableRp({
           border-radius: 999px;
           background: #e2e8f0;
           color: #334155;
-          font-size: 10.5px;
+          font-size: 12px;
           font-weight: 700;
           line-height: 1.35;
           margin-bottom: 4px;
@@ -955,7 +1077,8 @@ export default function DataTableRp({
                     <td className="approval-rp-cell" style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                       <span className="approval-rp-tag">{rp.divisi || '-'}</span>
                       <div className="approval-rp-subtle">
-                        Process by {rp.diprosesOleh || '-'}
+                        <span style={{ color: '#64748b' }}>Process by </span>
+                        {renderColoredSegments(rp.diprosesOleh || '-')}
                       </div>
                     </td>
                     {/* PIC Penerima */}
@@ -963,7 +1086,13 @@ export default function DataTableRp({
                       <DataTableIdentity
                         className="approval-rp-identity"
                         title={rp.receiverPic || rp.picPenerima || '-'}
-                        subtitle={purchaseCategory}
+                        initials={String(rp.receiverPic || rp.picPenerima || '-')
+                          .split(' ')
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((part) => part[0]?.toUpperCase())
+                          .join('')}
+                        subtitle={renderColoredCategories(purchaseCategory)}
                       />
                     </td>
                     <td className="approval-rp-cell" style={td}>

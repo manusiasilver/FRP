@@ -11,6 +11,7 @@ export default function ButtonActionApprovalFrp({
   options = {}
 }) {
   const { showDetail = true, showRevert = true } = options
+  const hasAttachment = Boolean(request.attachLink)
 
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 })
@@ -42,7 +43,7 @@ export default function ButtonActionApprovalFrp({
   const showRevertAction = showRevert && request.canRevert && isApprovedView
 
   return (
-    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center' }}>
       {showApproveReject && (
         <>
           <div style={{
@@ -116,7 +117,7 @@ export default function ButtonActionApprovalFrp({
           </div>
           
           {showDetail && (
-            <div style={{ position: 'relative' }} ref={dropdownRef}>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap' }} ref={dropdownRef}>
               <button
                 type="button"
                 onClick={(e) => { 
@@ -131,6 +132,7 @@ export default function ButtonActionApprovalFrp({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  position: 'relative',
                   width: '32px',
                   height: '32px',
                   background: '#f8fafc',
@@ -138,10 +140,27 @@ export default function ButtonActionApprovalFrp({
                   borderRadius: '8px',
                   cursor: 'pointer',
                   color: '#475569',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  flexShrink: 0,
                 }}
+                title="Aksi lainnya"
               >
                 <span className="material-icons-round" style={{ fontSize: '18px' }}>more_vert</span>
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '5px',
+                    right: '5px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '999px',
+                    background: hasAttachment ? '#22c55e' : '#cbd5e1',
+                    border: '1.5px solid white',
+                    boxShadow: hasAttachment ? '0 0 0 1px rgba(34, 197, 94, 0.18)' : '0 0 0 1px rgba(148, 163, 184, 0.12)',
+                    pointerEvents: 'none',
+                  }}
+                  title={hasAttachment ? 'Dokumen tersedia' : 'Dokumen tidak tersedia'}
+                />
               </button>
               {dropdownOpen && (
                 <div style={{

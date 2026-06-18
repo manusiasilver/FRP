@@ -698,7 +698,7 @@ export default function NewRP({
                       value={values.vendorSuggestion}
                       onChange={v => updateField('vendorSuggestion', v)}
                       options={vendorOptions}
-                      placeholder="Pilih vendor atau ketik sendiri"
+                      placeholder="Search or input vendor..."
                       className="frp-select"
                       menuPosition="fixed"
                       allowCustomInput
@@ -714,7 +714,7 @@ export default function NewRP({
                       value={values.kategoriPembelian}
                       onChange={v => updateField('kategoriPembelian', v)}
                       options={kategoriOptions}
-                      placeholder="Pilih Kategori"
+                      placeholder="Select Category"
                       className="frp-select"
                       menuPosition="fixed"
                     />
@@ -725,7 +725,7 @@ export default function NewRP({
                       value={values.diprosesOleh}
                       onChange={v => updateField('diprosesOleh', v)}
                       options={processDivOptions}
-                      placeholder="Pilih Divisi Pemroses"
+                      placeholder="Select Processing Division"
                       className="frp-select"
                       menuPosition="fixed"
                     />

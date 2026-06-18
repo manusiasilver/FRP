@@ -66,6 +66,43 @@ const headingStyle = {
 const iconStyle = { fontSize: '16px', color: '#1e3a8a' }
 const grid2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }
 const grid3 = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '6px' }
+const headerContentStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: '12px 16px',
+  width: '100%',
+}
+const headerTitleStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  minWidth: 0,
+  flex: '1 1 280px',
+}
+const headerMetaStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  justifyContent: 'flex-end',
+  alignItems: 'center',
+  gap: '8px',
+  flex: '0 1 auto',
+}
+const metaChipStyle = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  padding: '4px 10px',
+  borderRadius: '8px',
+  color: '#cbd5e1',
+  fontSize: '0.7rem',
+  fontWeight: '500',
+  fontFamily: 'monospace',
+  whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis',
+  overflow: 'hidden',
+  maxWidth: '100%',
+}
 
 const printRpPreview = rpId => {
   if (!rpId || typeof window === 'undefined') return
@@ -202,63 +239,53 @@ function DialogDetailRP({
         style={{ height: 'auto', maxHeight: '85vh', width: 'min(1180px, calc(100vw - 48px))', margin: 'auto', background: '#ffffff', borderRadius: '24px', overflow: 'hidden', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
       >
         <BackgroundDialog />
-        <div className="dashboard-popup__header" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-            <span className="dashboard-popup__eyebrow" style={{ margin: '0 0 4px 0', fontSize: '0.65rem', lineHeight: 1, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
-              {eyebrow}
-            </span>
-            <h2 className="dashboard-popup__title" id="dialog-rp-detail-title" style={{ fontSize: '1.1rem', margin: 0, lineHeight: 1.2, color: '#f8fafc', fontWeight: 600 }}>
-              {title}
-            </h2>
-          </div>
+        <div className="dashboard-popup__header" style={{ padding: '12px 16px' }}>
+          <div style={headerContentStyle}>
+            <div style={headerTitleStyle}>
+              <span className="dashboard-popup__eyebrow" style={{ margin: '0 0 4px 0', fontSize: '0.65rem', lineHeight: 1, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                {eyebrow}
+              </span>
+              <h2 className="dashboard-popup__title" id="dialog-rp-detail-title" style={{ fontSize: '1.1rem', margin: 0, lineHeight: 1.2, color: '#f8fafc', fontWeight: 600 }}>
+                {title}
+              </h2>
+            </div>
 
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-            <span style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              color: '#cbd5e1',
-              fontSize: '0.7rem',
-              fontWeight: '500',
-              fontFamily: 'monospace',
-              whiteSpace: 'nowrap',
-              textOverflow: 'ellipsis',
-              overflow: 'hidden'
-            }}>
-              {request.rpNo ? `No: ${request.rpNo}` : `ID: ${request.id}`}
-            </span>
-            {(() => {
-              const statusStr = request.status || 'Waiting Approval'
-              const sLow = statusStr.toLowerCase()
-              let bg = 'rgba(245, 158, 11, 0.12)', border = 'rgba(245, 158, 11, 0.25)', color = '#fbbf24'
+            <div style={headerMetaStyle}>
+              <span style={metaChipStyle}>
+                {request.rpNo ? `No: ${request.rpNo}` : `ID: ${request.id}`}
+              </span>
+              {(() => {
+                const statusStr = request.status || 'Waiting Approval'
+                const sLow = statusStr.toLowerCase()
+                let bg = 'rgba(245, 158, 11, 0.12)', border = 'rgba(245, 158, 11, 0.25)', color = '#fbbf24'
 
-              if (sLow.includes('approve') || sLow.includes('completed')) {
-                bg = 'rgba(16, 185, 129, 0.12)'; border = 'rgba(16, 185, 129, 0.25)'; color = '#34d399'
-              } else if (sLow.includes('reject')) {
-                bg = 'rgba(239, 68, 68, 0.12)'; border = 'rgba(239, 68, 68, 0.25)'; color = '#f87171'
-              } else if (sLow.includes('draft')) {
-                bg = 'rgba(148, 163, 184, 0.12)'; border = 'rgba(148, 163, 184, 0.25)'; color = '#cbd5e1'
-              }
+                if (sLow.includes('approve') || sLow.includes('completed')) {
+                  bg = 'rgba(16, 185, 129, 0.12)'; border = 'rgba(16, 185, 129, 0.25)'; color = '#34d399'
+                } else if (sLow.includes('reject')) {
+                  bg = 'rgba(239, 68, 68, 0.12)'; border = 'rgba(239, 68, 68, 0.25)'; color = '#f87171'
+                } else if (sLow.includes('draft')) {
+                  bg = 'rgba(148, 163, 184, 0.12)'; border = 'rgba(148, 163, 184, 0.25)'; color = '#cbd5e1'
+                }
 
-              return (
-                <span style={{
-                  background: bg,
-                  border: `1px solid ${border}`,
-                  color: color,
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                  fontSize: '0.65rem',
-                  fontWeight: '700',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0
-                }}>
-                  {statusStr}
-                </span>
-              )
-            })()}
+                return (
+                  <span style={{
+                    background: bg,
+                    border: `1px solid ${border}`,
+                    color: color,
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    fontSize: '0.65rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}>
+                    {statusStr}
+                  </span>
+                )
+              })()}
+            </div>
           </div>
         </div>
 
@@ -384,6 +411,15 @@ function DialogDetailRP({
         {/* Footer actions with elegant design, transitions and shadow */}
         <div className="dashboard-popup__actions" style={{ position: 'relative', zIndex: 1, padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', borderRadius: '0 0 24px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {extraFooter}
+
+          <button
+            type="button"
+            className="dashboard-popup__button btn-dialog btn-dialog-close"
+            onClick={onClose}
+          >
+            <span className="material-icons-round" style={{ fontSize: '18px' }}>close</span>
+            Tutup
+          </button>
 
           <button
             type="button"

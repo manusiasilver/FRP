@@ -12,7 +12,7 @@ function formatDate(value) {
   }).format(date)
 }
 
-function DateField({ value, onChange, placeholder = 'Pilih Tanggal', style }) {
+function DateField({ value, onChange, placeholder = 'Select Date', style }) {
   const inputRef = useRef(null)
 
   const openPicker = () => {
@@ -285,12 +285,12 @@ export default function FilterApprovalRp({
           </div>
 
           <div style={col('creator')}>
-            <FilterField label="Pemohon" icon="person">
+            <FilterField label="Requester" icon="person">
               <SearchableSelect
                 value={filters.creator}
                 onChange={(v) => setFilters((c) => ({ ...c, creator: v }))}
                 options={creatorOptions}
-                placeholder="Semua Pemohon"
+                placeholder="All Requester"
                 style={inputStyle}
               />
             </FilterField>
@@ -302,19 +302,19 @@ export default function FilterApprovalRp({
                 value={filters.status}
                 onChange={(v) => setFilters((c) => ({ ...c, status: v }))}
                 options={statusOptions}
-                placeholder="Semua Status"
+                placeholder="All Status"
                 style={inputStyle}
               />
             </FilterField>
           </div>
 
           <div style={col('division')}>
-            <FilterField label="Divisi" icon="business">
+            <FilterField label="Dvision" icon="business">
               <SearchableSelect
                 value={filters.division}
                 onChange={(v) => setFilters((c) => ({ ...c, division: v }))}
                 options={divisionOptions}
-                placeholder="Semua Divisi"
+                placeholder="All Divisions"
                 style={inputStyle}
               />
             </FilterField>
@@ -326,7 +326,7 @@ export default function FilterApprovalRp({
                 value={filters.processor}
                 onChange={(v) => setFilters((c) => ({ ...c, processor: v }))}
                 options={processorOptions}
-                placeholder="Semua Proses"
+                placeholder="All Process"
                 style={inputStyle}
               />
             </FilterField>
