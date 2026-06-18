@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PieChart } from '@mui/x-charts/PieChart'
 import { useUser } from '../../contexts/UserContext'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import CardBigBox from '../../components/cardbox/CardBigBox'
 import RevenueLastUpdate from '../../components/template/RevenueLastUpdate'
 
@@ -143,6 +144,11 @@ export default function DashboardPage() {
   const { setUser } = useUser()
   const [viewportWidth, setViewportWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1280)
 
+  usePageLoadingDialog(loading && !data, {
+    title: 'Memuat Dashboard',
+    message: 'Sistem sedang menyiapkan ringkasan dashboard Anda.',
+  })
+
   useEffect(() => {
     const handler = () => setViewportWidth(window.innerWidth)
     window.addEventListener('resize', handler)
@@ -205,12 +211,7 @@ export default function DashboardPage() {
 
   return (
     <main className="dashboard-main" style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '14px' : '20px', paddingBottom: isMobile ? '18px' : undefined }}>
-      {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#64748b', gap: '10px' }}>
-          <span className="material-icons-round" style={{ fontSize: '20px', animation: 'spin 1s linear infinite' }}>refresh</span>
-          Memuat data...
-        </div>
-      ) : !data ? (
+      {loading ? null : !data ? (
         <div style={{ padding: '2rem', color: '#ef4444' }}>Gagal memuat data dashboard.</div>
       ) : (
         <>

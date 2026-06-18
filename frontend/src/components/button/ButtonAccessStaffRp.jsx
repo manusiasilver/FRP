@@ -71,7 +71,7 @@ export default function ButtonAccessStaffRp({
         alignItems: 'flex-start',
         gap: '8px',
       }}>
-        <div style={{
+        {/* <div style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
@@ -85,11 +85,7 @@ export default function ButtonAccessStaffRp({
           lineHeight: 1.4,
           maxWidth: '280px',
         }}>
-          <span className="material-icons-round" style={{ fontSize: '16px', color: '#64748b', flexShrink: 0 }}>
-            info
-          </span>
-          <span>Department Anda tidak memiliki akses untuk memproses RP</span>
-        </div>
+        </div> */}
         {showDetail && (
           <ButtonDetail onClick={() => setSelected(rp)}>Detail</ButtonDetail>
         )}

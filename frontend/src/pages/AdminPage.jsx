@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, Navigate } from 'react-router-dom'
+import { usePageLoadingDialog } from '../contexts/PageLoadingContext'
 import { useUser } from '../contexts/UserContext'
 import { XClose } from '../components/template/TemplateIcons.jsx'
 import SearchableSelect from '../components/template/SearchableSelect.jsx'
@@ -349,6 +350,11 @@ export default function AdminPage() {
   const isTablet = viewportWidth >= MOBILE_BREAKPOINT && viewportWidth < TABLET_BREAKPOINT
   const styles = buildStyles(isMobile, isTablet, meta.accent)
 
+  usePageLoadingDialog(loading, {
+    title: `Memuat ${meta.title}`,
+    message: `Sistem sedang menyiapkan data ${meta.noun.toLowerCase()}.`,
+  })
+
   const loadData = useCallback(() => {
     fetch(`/api/data/admin?type=${type}`)
       .then(r => { if (!r.ok) { window.location.href = '/'; throw new Error() } return r.json() })
@@ -423,8 +429,6 @@ export default function AdminPage() {
   return (
     <>
       <main className="dashboard-main">
-        {loading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#64748b' }}>Memuat data...</div>}
-
         {!loading && <>
           {type === 'budgets' ? (
             <>

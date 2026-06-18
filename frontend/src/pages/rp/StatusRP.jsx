@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import { useUser } from '../../contexts/UserContext'
 import DialogDetailRP from '../../components/Dialog/DialogDetailRP'
 import DialogConfirm from '../../components/Dialog/DialogConfirm'
@@ -177,6 +178,11 @@ export default function StatusRP() {
   const [actionLoading, setActionLoading]     = useState(false)
   const [confirmRevert, setConfirmRevert]     = useState(null)
   const [actionResultDialog, setActionResultDialog] = useState(null)
+
+  usePageLoadingDialog(loading && !data, {
+    title: 'Memuat Status RP',
+    message: 'Sistem sedang menyiapkan daftar status Request Purchase.',
+  })
 
   // debounce search → filters.search
   useEffect(() => {

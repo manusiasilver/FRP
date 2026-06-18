@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useUser } from '../../contexts/UserContext'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import SearchableSelect from '../../components/template/SearchableSelect.jsx'
 import DataTableItemsFrp from '../../components/table/DataTableItemsFrp.jsx'
 import ButtonAddItemsFrp from '../../components/button/ButtonAddItemsFrp.jsx'
@@ -308,6 +309,11 @@ export default function NewFRP() {
   const [viewportWidth, setViewportWidth] = useState(() => (typeof window === 'undefined' ? 1280 : window.innerWidth))
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [successDialog, setSuccessDialog] = useState({ isOpen: false, title: '', message: '', subMessage: '', frpNo: '' })
+
+  usePageLoadingDialog(loading, {
+    title: 'Memuat Form FRP',
+    message: 'Sistem sedang menyiapkan data form FRP Anda.',
+  })
 
   useEffect(() => {
     const query = searchParams.toString() ? `?${searchParams.toString()}` : ''
@@ -764,11 +770,6 @@ export default function NewFRP() {
         padding: isMobile ? '12px' : '16px',
       }}
     >
-      {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#64748b' }}>
-          Memuat data...
-        </div>
-      )}
       {error && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#ef4444' }}>
           {error}

@@ -384,20 +384,14 @@ export default function DataTableRp({
     )
   }
 
-  if (loading) {
+  if (loading && paginated.length === 0) {
     return (
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           flex: 1,
-          color: '#64748b',
-          padding: '4rem 2rem',
+          minHeight: 0,
         }}
-      >
-        Memuat data...
-      </div>
+      />
     )
   }
 

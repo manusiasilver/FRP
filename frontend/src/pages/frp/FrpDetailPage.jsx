@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import CreateButton from '../../components/button/CreateButton'
 import DialogConfirm from '../../components/Dialog/DialogConfirm'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 
 const DOCS = ['Form Request Payment', 'Tanda Terima Asli', 'Invoice / Kontrak', 'Surat Jalan Asli / Berita Acara', 'Faktur Pajak', 'Purchase Order']
 
@@ -67,6 +68,11 @@ export default function FrpDetailPage() {
   const [confirmAction, setConfirmAction] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
 
+  usePageLoadingDialog(loading, {
+    title: 'Memuat Detail FRP',
+    message: 'Sistem sedang menyiapkan detail FRP yang dipilih.',
+  })
+
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth)
     window.addEventListener('resize', handleResize)
@@ -81,7 +87,7 @@ export default function FrpDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <div style={{ padding: '2rem', color: '#64748b' }}>Memuat...</div>
+  if (loading) return <div style={{ minHeight: '100vh' }} />
   if (!payload?.data) return <div style={{ padding: '2rem', color: '#ef4444' }}>Data FRP tidak ditemukan.</div>
 
   const { data, user, isIT, canApprove } = payload

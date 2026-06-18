@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import { useUser } from '../../contexts/UserContext'
 import DialogConfirm from '../../components/Dialog/DialogConfirm'
 import DialogSuccesAction from '../../components/Dialog/DialogSuccesAction'
@@ -229,6 +230,11 @@ export default function RpApprovalPage() {
   const currentUserJobLevelRank = getUserJobLevelRank(currentUser)
   const isMobile = viewportWidth < MOBILE_BREAKPOINT
   const isTablet = viewportWidth >= MOBILE_BREAKPOINT && viewportWidth < TABLET_BREAKPOINT
+
+  usePageLoadingDialog(loading && !data, {
+    title: 'Memuat Approval RP',
+    message: 'Sistem sedang menyiapkan daftar approval Request Purchase.',
+  })
 
   const loadData = (view = tab, options = {}) => {
     const { silent = false } = options

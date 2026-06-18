@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import { useUser } from '../../contexts/UserContext'
 import DialogStatusFrp from '../../components/Dialog/DialogStatusFrp'
 
@@ -62,6 +63,11 @@ export default function StatusFRP() {
   const [viewportWidth, setViewportWidth] = useState(
     () => (typeof window === 'undefined' ? 1280 : window.innerWidth)
   )
+
+  usePageLoadingDialog(loading && !data, {
+    title: 'Memuat Status FRP',
+    message: 'Sistem sedang menyiapkan daftar status FRP.',
+  })
 
   // debounce search
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -241,13 +247,6 @@ export default function StatusFRP() {
       </div>
 
       {/* ── Content ── */}
-      {loading && !data && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#64748b', gap: '10px', padding: '4rem' }}>
-          <span className="material-icons-round" style={{ fontSize: '28px', opacity: 0.4 }}>hourglass_empty</span>
-          Memuat data...
-        </div>
-      )}
-
       {error && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#ef4444', gap: '10px', padding: '4rem' }}>
           <span className="material-icons-round">error</span> {error}

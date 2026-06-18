@@ -44,6 +44,10 @@ export default function DataTableReport({
   totalAmount,
   loading
 }) {
+  if (loading && filtered.length === 0) {
+    return <div style={{ flex: 1, minHeight: 0, background: 'white' }} />
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', background: 'white', overflow: 'hidden', position: 'relative' }}>
       {loading && (

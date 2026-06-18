@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import { useUser } from '../../contexts/UserContext'
 import DataTableReport from './DataTableReport'
 import FilterReport from './FilterReport'
@@ -27,6 +28,11 @@ export default function LaporanPage({ type = 'frp' }) {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilters] = useState({ search: '', status: type === 'rp' ? 'approved' : 'APPROVED', company: '', divisi: '', from: '', to: '' })
+
+  usePageLoadingDialog(loading && !data, {
+    title: reportType === 'rp' ? 'Memuat Report RP' : 'Memuat Report FRP',
+    message: 'Sistem sedang menyiapkan data laporan Anda.',
+  })
 
   useEffect(() => {
     setFilters({ search: '', status: type === 'rp' ? 'approved' : 'APPROVED', company: '', divisi: '', from: '', to: '' })

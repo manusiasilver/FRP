@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import BackgroundMain from './components/template/BackgroundMain'
 import { UserProvider, useUser } from './contexts/UserContext'
+import { PageLoadingProvider } from './contexts/PageLoadingContext'
 import DashboardLayout from './components/template/DashboardLayout'
 import SelectCompanyPage from './pages/SelectCompanyPage'
 import SelectDivisionPage from './pages/SelectDivisionPage'
@@ -125,7 +126,9 @@ export default function App() {
       <BackgroundMain />
       <UserProvider>
         <AuthBootstrap>
-          <AppRoutes />
+          <PageLoadingProvider>
+            <AppRoutes />
+          </PageLoadingProvider>
         </AuthBootstrap>
       </UserProvider>
     </>

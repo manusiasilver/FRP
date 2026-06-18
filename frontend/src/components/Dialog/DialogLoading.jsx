@@ -7,25 +7,31 @@ export default function DialogLoading({
   eyebrow = 'Mohon Tunggu',
   title = 'Sedang Memproses',
   message = 'Permintaan Anda sedang diproses. Mohon tunggu sebentar.',
+  cancelLabel = 'Batal',
   confirmLabel = 'Ya, Lanjutkan',
   icon = 'help',
   tone = 'primary',
   isLoading = false,
+  allowClose = false,
+  showCloseButton = false,
+  showActions = false,
   onClose,
   onConfirm,
   children,
 }) {
+  const canClose = allowClose && !isLoading
+
   useEffect(() => {
     if (!isOpen) return undefined
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !isLoading) {
+      if (event.key === 'Escape' && canClose) {
         onClose?.()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, isLoading, onClose])
+  }, [canClose, isOpen, onClose])
 
   if (!isOpen || typeof document === 'undefined') return null
 
@@ -71,7 +77,7 @@ export default function DialogLoading({
   }[tone] || { background: '#dbeafe', color: '#1e40af' }
 
   const handleOverlayClick = () => {
-    if (!isLoading) onClose?.()
+    if (canClose) onClose?.()
   }
 
   const dialogNode = (
@@ -114,20 +120,22 @@ export default function DialogLoading({
               {title}
             </h2>
           </div>
-          <button
-            type="button"
-            className="dashboard-popup__close"
-            aria-label="Tutup dialog"
-            onClick={handleOverlayClick}
-            style={{
-              flexShrink: 0,
-              backdropFilter: 'blur(10px)',
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
-            }}
-          >
-            <span className="material-icons-round" style={{ fontSize: '18px' }}>close</span>
-          </button>
+          {showCloseButton ? (
+            <button
+              type="button"
+              className="dashboard-popup__close"
+              aria-label="Tutup dialog"
+              onClick={handleOverlayClick}
+              style={{
+                flexShrink: 0,
+                backdropFilter: 'blur(10px)',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+              }}
+            >
+              <span className="material-icons-round" style={{ fontSize: '18px' }}>close</span>
+            </button>
+          ) : null}
         </div>
 
         <div
@@ -186,47 +194,49 @@ export default function DialogLoading({
           </div>
         </div>
 
-        <div
-          className="dashboard-popup__actions"
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            padding: '16px 18px 18px',
-            background: 'linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(241, 245, 249, 0.96) 100%)',
-            borderTop: '1px solid rgba(226, 232, 240, 0.9)',
-            gap: '10px',
-          }}
-        >
-          <button
-            type="button"
-            className="dashboard-popup__button dashboard-popup__button--secondary"
-            onClick={handleOverlayClick}
-            disabled={isLoading}
+        {showActions ? (
+          <div
+            className="dashboard-popup__actions"
             style={{
-              borderRadius: '10px',
-              paddingInline: '18px',
-              boxShadow: 'none',
-              border: '1px solid #cbd5e1',
-              background: '#fff',
+              position: 'relative',
+              zIndex: 1,
+              padding: '16px 18px 18px',
+              background: 'linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(241, 245, 249, 0.96) 100%)',
+              borderTop: '1px solid rgba(226, 232, 240, 0.9)',
+              gap: '10px',
             }}
           >
-            Batal
-          </button>
-          <button
-            type="button"
-            className="dashboard-popup__button"
-            onClick={onConfirm}
-            disabled={isLoading}
-            style={confirmToneStyles}
-          >
-            {isLoading ? (
-              <span className="material-icons-round dashboard-popup__spinner" style={{ fontSize: '18px' }}>progress_activity</span>
-            ) : (
-              <span className="material-icons-round" style={{ fontSize: '18px' }}>{icon}</span>
-            )}
-            {isLoading ? 'Memproses...' : confirmLabel}
-          </button>
-        </div>
+            <button
+              type="button"
+              className="dashboard-popup__button dashboard-popup__button--secondary"
+              onClick={handleOverlayClick}
+              disabled={isLoading}
+              style={{
+                borderRadius: '10px',
+                paddingInline: '18px',
+                boxShadow: 'none',
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+              }}
+            >
+              {cancelLabel}
+            </button>
+            <button
+              type="button"
+              className="dashboard-popup__button"
+              onClick={onConfirm}
+              disabled={isLoading}
+              style={confirmToneStyles}
+            >
+              {isLoading ? (
+                <span className="material-icons-round dashboard-popup__spinner" style={{ fontSize: '18px' }}>progress_activity</span>
+              ) : (
+                <span className="material-icons-round" style={{ fontSize: '18px' }}>{icon}</span>
+              )}
+              {isLoading ? 'Memproses...' : confirmLabel}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   )

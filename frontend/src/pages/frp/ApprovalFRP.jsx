@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 
 import DialogFrpDetail from '../../components/Dialog/DialogDetailFrp'
 import DialogConfirm from '../../components/Dialog/DialogConfirm'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import { useUser } from '../../contexts/UserContext'
 import DataTableApprovalFrp from '../../components/table/DataTableApprovalFrp'
 import DialogSuccesAction from '../../components/Dialog/DialogSuccesAction'
@@ -303,6 +304,11 @@ export default function ApprovalFRP() {
   const [actionLoading, setActionLoading] = useState(false)
   const [actionResultDialog, setActionResultDialog] = useState(null)
 
+  usePageLoadingDialog(loading && !data, {
+    title: 'Memuat Approval FRP',
+    message: 'Sistem sedang menyiapkan daftar approval FRP.',
+  })
+
   const requestSort = (key) => {
     if (!key) return
     setSortConfig(c => ({ key, direction: c.key === key && c.direction === 'asc' ? 'desc' : 'asc' }))
@@ -543,12 +549,6 @@ export default function ApprovalFRP() {
           padding: isMobile ? '12px' : undefined,
         }}
       >
-        {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#64748b' }}>
-            Memuat data...
-          </div>
-        )}
-
         {/* Unified Table & Filter Card */}
         <div
           style={{

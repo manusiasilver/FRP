@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useUser } from '../../contexts/UserContext'
+import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import DialogConfirm from '../../components/Dialog/DialogConfirm'
 import DialogSuccesAction from '../../components/Dialog/DialogSuccesAction'
 import SearchableSelect from '../../components/template/SearchableSelect.jsx'
@@ -303,6 +304,11 @@ export default function NewRP({
   const [successDialog, setSuccessDialog] = useState({ isOpen: false, title: '', message: '', subMessage: '', rpNo: '' })
   const [vw, setVw] = useState(typeof window === 'undefined' ? 1280 : window.innerWidth)
 
+  usePageLoadingDialog(loading, {
+    title: 'Memuat Form RP',
+    message: 'Sistem sedang menyiapkan data Request Purchase Anda.',
+  })
+
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
     if (embeddedProcessId) params.set('process', embeddedProcessId)
@@ -588,11 +594,6 @@ export default function NewRP({
           background: 'transparent',
         }}
       >
-        {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#64748b' }}>
-            Memuat data...
-          </div>
-        )}
         {error && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#ef4444' }}>
             {error}
