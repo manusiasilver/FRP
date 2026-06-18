@@ -3,7 +3,7 @@ const { centralDb } = require('../../db');
 const crypto = require('crypto');
 const https = require('https');
 const { USER_SQL } = require('../config/constants');
-const { normalizeCompanyCode } = require('../utils/company');
+const { normalizeCompanyCode, sameCompanyName } = require('../utils/company');
 
 // ============================================================
 // USER / SESSION HELPERS
@@ -420,6 +420,73 @@ async function canLookAllFrp(user) {
     return rows.length > 0;
 }
 
+function getFrpApprovalUserDivision(user) {
+    return normText(user?.selectedDivision || user?.departmentClass || user?.departmentName);
+}
+
+function getFrpApprovalUserJobLevel(user) {
+    return normText(user?.selectedJobLevel || user?.jobLevelName || user?.job_level);
+}
+
+function getFrpApprovalRequestDivision(request) {
+    return normText(
+        request?.divisi ||
+        request?.division ||
+        request?.department_class ||
+        request?.departmentClass ||
+        request?.department_name ||
+        request?.departmentName
+    );
+}
+
+function isDirectorOrCommissionerJobLevel(jobLevel) {
+    return [
+        'DIREKTUR',
+        'KOMISARIS',
+        'COMMISSIONER',
+        'PRESIDENT DIRECTOR',
+        'FINANCE DIRECTOR',
+    ].includes(jobLevel);
+}
+
+function isManagerJobLevel(jobLevel) {
+    return jobLevel === 'MANAGER' || jobLevel === 'SENIOR MANAGER';
+}
+
+function isDivisionRestrictedFrpApprover(user) {
+    if (!user || user.role === 'administrator') return false;
+
+    const userDivision = getFrpApprovalUserDivision(user);
+    if (userDivision === 'IT') return false;
+
+    const jobLevel = getFrpApprovalUserJobLevel(user);
+    if (isDirectorOrCommissionerJobLevel(jobLevel)) return false;
+
+    return isManagerJobLevel(jobLevel) || Number(user.jobLevelRank || user.job_level_value || 0) >= 4;
+}
+
+function canApproveFrpRequest(user, request) {
+    if (!user || !request) return false;
+
+    if (user.role === 'administrator') return true;
+
+    const requestCompany = request.companyName || request.company_name || request.company || '';
+    const userCompany = user.selectedCompany || user.companyName || user.company || '';
+    if (!sameCompanyName(requestCompany, userCompany)) return false;
+
+    const userDivision = getFrpApprovalUserDivision(user);
+    if (userDivision === 'IT') return true;
+
+    const jobLevel = getFrpApprovalUserJobLevel(user);
+    if (isDirectorOrCommissionerJobLevel(jobLevel)) return true;
+
+    const isManagerLevel = isManagerJobLevel(jobLevel) || Number(user.jobLevelRank || user.job_level_value || 0) >= 4;
+    if (!isManagerLevel) return false;
+
+    const requestDivision = getFrpApprovalRequestDivision(request);
+    return Boolean(userDivision && requestDivision && userDivision === requestDivision);
+}
+
 function enrichReqWithRevert(r, u) {
     const isIT = u.selectedDivision === 'IT';
     const frpDeptClass = r.department_class || r.departmentClass || '';
@@ -537,6 +604,8 @@ module.exports = {
     getBudgetAccessPolicy,
     validateFrpBudgetAccess,
     canLookAllFrp,
+    isDivisionRestrictedFrpApprover,
+    canApproveFrpRequest,
     enrichReqWithRevert,
     getExchangeRateFromGoogle,
     filterDepartmentsForUser,

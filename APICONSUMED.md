@@ -148,8 +148,8 @@ GET /api/user/info
 Catatan untuk approval FRP:
 
 - Akses approve/reject aktif untuk role manager ke atas.
-- `jobLevelRank >= 4` boleh approve lintas divisi untuk FRP dan RP.
-- Rule ini tetap berlaku untuk divisi IT.
+- `Manager` hanya bisa melihat dan approve FRP dari divisinya sendiri.
+- `Administrator`, `IT`, `Direktur`, dan `Komisaris` tetap bisa approve lintas divisi.
 
 ---
 

@@ -50,8 +50,15 @@ export default function ButtonAccessManagerRp({
   const isManagerJobLevel = /\bmanager\b/.test(userJobLevelName)
   const canTakeManagerAction = canTakeApprovalAction || userJobLevelRank >= 2 || isManagerJobLevel
   const userDivision = normalizeDivision(user?.departmentClass || user?.selectedDivision || user?.departmentName)
+  const requesterDivision = normalizeDivision(rp.departmentClass || rp.divisi || rp.departmentName)
   const processDivision = normalizeDivision(rp.processedByDepartment || rp.diprosesOleh)
+  const isITManager = userDivision === 'IT'
   const canFinalApproveByDivision = !!userDivision && !!processDivision && userDivision === processDivision
+  const isManagerActionDisabledByDivision =
+    rp.status === 'waiting_manager' &&
+    canTakeManagerAction &&
+    isITManager &&
+    requesterDivision !== 'IT'
 
   const canManagerApprove = rp.status === 'waiting_manager' && canTakeManagerAction
   const canDivisionProcess = rp.status === 'division_review' && userJobLevelRank > 1 && canProcessThisRp
@@ -80,10 +87,23 @@ export default function ButtonAccessManagerRp({
           borderRadius: '30px',
           padding: '4px',
           gap: '4px',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
+          opacity: isManagerActionDisabledByDivision ? 0.72 : 1,
         }}>
-          <ButtonReject disabled={actionLoading} onClick={() => requestAction(rp, 'manager-reject')}>Reject</ButtonReject>
-          <ButtonApprove disabled={actionLoading} onClick={() => requestAction(rp, 'manager-approve')}>Approve</ButtonApprove>
+          <ButtonReject
+            disabled={actionLoading || isManagerActionDisabledByDivision}
+            title={isManagerActionDisabledByDivision ? 'Manager IT hanya dapat approve divisi IT' : undefined}
+            onClick={() => requestAction(rp, 'manager-reject')}
+          >
+            Reject
+          </ButtonReject>
+          <ButtonApprove
+            disabled={actionLoading || isManagerActionDisabledByDivision}
+            title={isManagerActionDisabledByDivision ? 'Manager IT hanya dapat approve divisi IT' : undefined}
+            onClick={() => requestAction(rp, 'manager-approve')}
+          >
+            Approve
+          </ButtonApprove>
         </div>
       )}
 

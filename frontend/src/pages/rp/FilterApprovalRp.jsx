@@ -199,7 +199,7 @@ export default function FilterApprovalRp({
             gap: '12px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
                 width: '38px',
@@ -222,9 +222,9 @@ export default function FilterApprovalRp({
                 {filteredCount} data sesuai filter aktif
               </p>
             </div>
-          </div>
+          </div> */}
 
-          <button
+          {/* <button
             type="button"
             onClick={onRefresh}
             title="Segarkan data"
@@ -251,7 +251,7 @@ export default function FilterApprovalRp({
             }}
           >
             <span className="material-icons-round" style={{ fontSize: '18px' }}>refresh</span>
-          </button>
+          </button> */}
         </div>
 
         <div

@@ -1058,17 +1058,31 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
     const sortDir   = req.query.sortDir === 'asc' ? 'asc' : 'desc';
 
     let reqs = await fetchAllRpRequests();
+    const lookScope = await getRpLookScope(u);
+    const userDivision = u.selectedDivision || u.departmentClass;
 
     const isApprovedScope = r => u.role === 'administrator' || (
         sameCompanyName(r.companyName, u.selectedCompany) &&
         (
-            normalizeScopeText(r.divisi) === normalizeScopeText(u.selectedDivision || u.departmentClass) ||
-            canViewRpProcessDivision(u.selectedDivision || u.departmentClass, r.diprosesOleh || r.divisi)
+            normalizeScopeText(r.divisi) === normalizeScopeText(userDivision) ||
+            canViewRpProcessDivision(userDivision, r.diprosesOleh || r.divisi)
         )
     );
 
+    const isPendingScope = r => {
+        if (u.role === 'administrator') return true;
+        if (!sameCompanyName(r.companyName, u.selectedCompany)) return false;
+
+        const isOwnDivision = normalizeScopeText(r.divisi) === normalizeScopeText(userDivision);
+        if (isOwnDivision) return true;
+
+        return normalizeScopeText(userDivision) === 'IT' &&
+            lookScope === 'processor' &&
+            canViewRpProcessDivision(userDivision, r.diprosesOleh || r.divisi);
+    };
+
     // badge counts (sebelum view filter)
-    const pendingCount         = reqs.filter(r => r.status === 'waiting_manager' && isRpInUserScope(r, u)).length;
+    const pendingCount         = reqs.filter(r => r.status === 'waiting_manager' && isPendingScope(r)).length;
     const processCount         = reqs.filter(r => r.status === 'division_review' && isRpInUserScope(r, u, true)).length;
     const processApprovalCount = reqs.filter(r => r.status === 'final_review' && isRpInUserScope(r, u, true)).length;
     const approvedCount        = reqs.filter(r =>
@@ -1089,10 +1103,9 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
         if (u.role !== 'administrator') reqs = reqs.filter(r => isApprovedScope(r));
     } else {
         reqs = reqs.filter(r => r.status === 'waiting_manager');
-        if (u.role !== 'administrator') reqs = reqs.filter(r => isRpInUserScope(r, u));
+        if (u.role !== 'administrator') reqs = reqs.filter(r => isPendingScope(r));
     }
 
-    const lookScope = await getRpLookScope(u);
     const isPendingView = view === 'pending';
 
     if (lookScope === 'own') {

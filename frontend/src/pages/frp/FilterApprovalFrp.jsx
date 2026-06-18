@@ -12,7 +12,7 @@ function formatDate(value) {
     : '-'
 }
 
-function DateField({ value, onChange, placeholder = 'Pilih Tanggal', style }) {
+function DateField({ value, onChange, placeholder = 'Select Date', style }) {
   const inputRef = useRef(null)
 
   const openPicker = () => {
@@ -316,7 +316,7 @@ export default function FilterApprovalFrp({
               value={filters.attachment}
               onChange={(v) => setFilters((c) => ({ ...c, attachment: v }))}
               options={attachmentOptions}
-              placeholder="Semua Attachment"
+              placeholder="All Attachments"
               style={inputStyle}
             />
           </FilterField>

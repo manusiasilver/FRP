@@ -28,6 +28,8 @@ const {
     adjustBudgetUsage,
     validateFrpBudgetAccess,
     canLookAllFrp,
+    isDivisionRestrictedFrpApprover,
+    canApproveFrpRequest,
     enrichReqWithRevert,
     getExchangeRateFromGoogle,
     filterDepartmentsForUser,
@@ -576,6 +578,9 @@ async function sendFrpApprovalView(req, res, forcedView, section = 'full') {
 
         // scope filter
         if (!hasLookAccess) all = all.filter(r => isRequestInUserScope(r, u));
+        if (!isAllView && isDivisionRestrictedFrpApprover(u)) {
+            all = all.filter(r => canApproveFrpRequest(u, r));
+        }
 
         // badge counts (sebelum view/filter)
         const pendingCount  = all.filter(r => r.status === 'PENDING').length;
@@ -754,8 +759,8 @@ router.get('/api/frp/:id', checkAuth, async (req, res) => {
         if (!data) return res.status(404).json({ error: 'Not found' });
 
         const user = req.session.user;
-        const isIT = user.role === 'administrator' || user.selectedDivision === 'IT';
-        const canApprove = isIT || ['Manager', 'Direktur', 'Komisaris'].includes(user.selectedJobLevel);
+        const isIT = user.role === 'administrator' || String(user.selectedDivision || user.departmentClass || '').trim().toUpperCase() === 'IT';
+        const canApprove = canApproveFrpRequest(user, data);
         const [employees, companies] = await Promise.all([getAllEmployees(), getCompanies()]);
 
         res.json({ data, employees, companies, user, isIT, canApprove, canEdit: isIT });
@@ -1090,8 +1095,9 @@ router.post('/api/frp/:id/:action', checkAuth, async (req, res) => {
     try {
         const { action, id: frpId } = req.params;
         const u = req.session.user;
+        let frpApprovalTarget = null;
 
-        if (action === 'approve') {
+        if (action === 'approve' || action === 'reject') {
             const [rows] = await db.query(`
                 SELECT company_id, company_code, company_name,
                        department_id, department_name, department_class, department_code
@@ -1099,10 +1105,25 @@ router.post('/api/frp/:id/:action', checkAuth, async (req, res) => {
                 WHERE id = ?
             `, [frpId]);
 
+            if (!rows.length) {
+                return res.status(404).json({ success: false, error: 'FRP tidak ditemukan' });
+            }
+
+            frpApprovalTarget = rows[0];
+
+            if (!canApproveFrpRequest(u, frpApprovalTarget)) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Anda tidak memiliki akses approval untuk FRP dari divisi ini',
+                });
+            }
+        }
+
+        if (action === 'approve') {
             let approvedBy = u.fullName;
 
-            if (rows.length) {
-                const r = rows[0];
+            if (frpApprovalTarget) {
+                const r = frpApprovalTarget;
                 const params = [r.department_name || '', r.department_class || ''];
                 let sql = USER_SQL + ' AND (md.name = ? OR md.class = ?) AND mjl.level >= 4';
                 if (r.company_code) {
