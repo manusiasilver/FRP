@@ -534,7 +534,14 @@ export default function ApprovalFRP() {
 
       <main
         className="dashboard-main"
-        style={{ display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: isMobile ? 'auto' : 'hidden',
+          overflowX: 'hidden',
+          minHeight: 0,
+          padding: isMobile ? '12px' : undefined,
+        }}
       >
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#64748b' }}>
@@ -546,13 +553,14 @@ export default function ApprovalFRP() {
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
             background: 'white',
             borderRadius: '16px',
             border: '1.5px solid #e8edf4',
             boxShadow: '0 4px 20px -2px rgba(148, 163, 184, 0.08)',
-            overflow: 'hidden',
+            overflow: isMobile ? 'visible' : 'hidden',
           }}
         >
           {/* Top Filter Area (Integrated inside the card) */}

@@ -752,7 +752,18 @@ export default function NewFRP() {
   }
 
   return (
-    <main className="dashboard-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: '16px' }}>
+    <main
+      className="dashboard-main"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        overflowY: isMobile ? 'auto' : 'hidden',
+        overflowX: 'hidden',
+        padding: isMobile ? '12px' : '16px',
+      }}
+    >
       {loading && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px', color: '#64748b' }}>
           Memuat data...

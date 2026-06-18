@@ -3278,6 +3278,17 @@ select {
 
   .dashboard-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: hidden;
+  }
+
+  .dashboard-stage {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
   }
 
   .sidebar {
@@ -3300,6 +3311,11 @@ select {
 
   .dashboard-main {
     padding: 20px;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 
   .dashboard-overview,
@@ -3547,5 +3563,21 @@ select {
   .sidebar.collapsed {
     width: var(--sidebar-width);
     max-width: 80vw;
+  }
+}
+
+@media (max-width: 1024px) {
+  .frp-shell {
+    height: auto;
+    overflow: visible;
+  }
+
+  .frp-shell--embedded {
+    gap: 10px;
+  }
+
+  .frp-bottom-panel,
+  .frp-card--scroll {
+    overflow: visible;
   }
 }

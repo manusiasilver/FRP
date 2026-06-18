@@ -565,13 +565,61 @@
 }
 
 @media (max-width: 767px) {
+  .frp-shell {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    gap: 12px;
+    padding-bottom: 16px;
+  }
+
   .frp-top-panel {
     grid-template-columns: 1fr;
+    margin-bottom: 0;
   }
+
   .frp-grid-2 {
     grid-template-columns: 1fr;
   }
+
   .frp-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .frp-bottom-panel {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .frp-card,
+  .frp-card--scroll {
+    overflow: visible;
+  }
+
+  .frp-card {
+    padding: 18px 16px;
+  }
+
+  .frp-card--scroll {
+    flex: 0 0 auto;
+  }
+
+  .frp-items-scrollable {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .frp-textarea {
+    min-height: 140px;
+  }
+
+  .frp-card-header {
+    align-items: flex-start;
+  }
+
+  .frp-footer {
+    margin-top: 14px;
   }
 }

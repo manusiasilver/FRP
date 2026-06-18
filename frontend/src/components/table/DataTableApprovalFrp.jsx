@@ -6,6 +6,42 @@ function parseAmount(amount) {
   return parseInt(String(amount || '0').replace(/\./g, '').replace(/[^0-9]/g, ''), 10) || 0
 }
 
+function formatDisplayValue(value) {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => formatDisplayValue(item))
+      .filter((item) => item && item !== '-')
+    return parts.length > 0 ? parts.join(', ') : '-'
+  }
+
+  if (typeof value === 'object') {
+    const preferred =
+      value.label ??
+      value.name ??
+      value.title ??
+      value.value ??
+      value.code ??
+      value.number ??
+      value.id
+
+    if (preferred !== undefined && preferred !== null && preferred !== '') {
+      return String(preferred)
+    }
+
+    try {
+      return JSON.stringify(value)
+    } catch (_) {
+      return String(value)
+    }
+  }
+
+  return String(value)
+}
+
 function formatDate(value) {
   return value
     ? new Intl.DateTimeFormat('id-ID', {
@@ -17,7 +53,7 @@ function formatDate(value) {
 }
 
 function formatCurrency(value) {
-  return `IDR ${value.toLocaleString('id-ID')}`
+  return `IDR ${parseAmount(value).toLocaleString('id-ID')}`
 }
 
 function getBankLabel(request) {
@@ -29,7 +65,7 @@ function getAccountNumber(request) {
 }
 
 function getFrpDescription(request) {
-  return request?.frp_description || '-'
+  return formatDisplayValue(request?.frp_description)
 }
 
 function getRequestValue(request, ...keys) {
@@ -43,7 +79,8 @@ function getRequestValue(request, ...keys) {
 }
 
 function DivisionBadge({ division }) {
-  if (!division) return null
+  const divisionLabel = formatDisplayValue(division)
+  if (divisionLabel === '-') return null
 
   return (
     <span
@@ -60,9 +97,9 @@ function DivisionBadge({ division }) {
         lineHeight: 1.2,
         whiteSpace: 'nowrap',
       }}
-      title={division}
+      title={divisionLabel}
     >
-      {division}
+      {divisionLabel}
     </span>
   )
 }
@@ -71,7 +108,9 @@ function DocTypeCell({ request }) {
   const externalDocumentType = getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type')
   const externalDocumentNumber = getRequestValue(request, 'externalDocumentNumber', 'extDocNumber', 'ext_doc_number')
   const internalPoNumber = getRequestValue(request, 'internalPoNumber', 'internal_po_number')
-  const details = [externalDocumentType, externalDocumentNumber, internalPoNumber].filter(Boolean)
+  const details = [externalDocumentType, externalDocumentNumber, internalPoNumber]
+    .map((item) => formatDisplayValue(item))
+    .filter((item) => item && item !== '-')
 
   return (
     <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -101,15 +140,15 @@ function DocTypeCell({ request }) {
 }
 
 function PaymentDetailsCell({ request, onCopyAccount, copiedAccountId }) {
-  const paymentLabel = getRequestValue(request, 'vendor', 'paymentMethod', 'payment_method')
-  const bankLabel = getBankLabel(request)
-  const accountNumber = getAccountNumber(request)
+  const paymentLabel = formatDisplayValue(getRequestValue(request, 'vendor', 'paymentMethod', 'payment_method'))
+  const bankLabel = formatDisplayValue(getBankLabel(request))
+  const accountNumber = formatDisplayValue(getAccountNumber(request))
   const amountLabel = formatCurrency(request.amount || 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
       <div
-        title={bankLabel || paymentLabel || '-'}
+          title={bankLabel !== '-' ? bankLabel : paymentLabel}
         style={{
           minWidth: 0,
           alignSelf: 'flex-start',
@@ -126,7 +165,7 @@ function PaymentDetailsCell({ request, onCopyAccount, copiedAccountId }) {
           textOverflow: 'ellipsis',
         }}
       >
-        {bankLabel || paymentLabel || '-'}
+        {bankLabel !== '-' ? bankLabel : paymentLabel}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', minWidth: 0 }}>
         <div
@@ -143,7 +182,7 @@ function PaymentDetailsCell({ request, onCopyAccount, copiedAccountId }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {accountNumber || '-'}
+          {accountNumber}
         </div>
         <button
           type="button"
@@ -165,8 +204,8 @@ function PaymentDetailsCell({ request, onCopyAccount, copiedAccountId }) {
             padding: 0,
             flexShrink: 0,
           }}
-          disabled={!accountNumber}
-          title={accountNumber ? 'Salin nomor rekening' : 'Nomor rekening tidak tersedia'}
+          disabled={accountNumber === '-'}
+          title={accountNumber !== '-' ? 'Salin nomor rekening' : 'Nomor rekening tidak tersedia'}
         >
           <span className="material-icons-round" style={{ fontSize: '15px', lineHeight: 1 }}>
             {copiedAccountId === request.id ? 'check' : 'content_copy'}
@@ -206,8 +245,9 @@ const statusIcons = {
 }
 
 function StatusPill({ status }) {
-  const statusStyle = statusColors[status] || {}
-  const statusIcon = statusIcons[status] || 'info'
+  const normalizedStatus = formatDisplayValue(status).toUpperCase()
+  const statusStyle = statusColors[normalizedStatus] || {}
+  const statusIcon = statusIcons[normalizedStatus] || 'info'
 
   return (
     <span
@@ -228,7 +268,7 @@ function StatusPill({ status }) {
       <span className="material-icons-round" style={{ fontSize: '14px', lineHeight: 1 }}>
         {statusIcon}
       </span>
-      <span>{status}</span>
+      <span>{formatDisplayValue(status)}</span>
     </span>
   )
 }
@@ -406,7 +446,7 @@ export default function DataTableApprovalFrp({
                     onClick={() => copyFrpNo(request.id, request.frpNo)}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem' }}>{request.frpNo}</span>
+                    <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem' }}>{formatDisplayValue(request.frpNo)}</span>
                     <span className="material-icons-round" style={{ fontSize: '15px', color: copiedFrpId === request.id ? '#15803d' : '#94a3b8' }}>
                       {copiedFrpId === request.id ? 'check' : 'content_copy'}
                     </span>
@@ -416,19 +456,19 @@ export default function DataTableApprovalFrp({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginBottom: '12px' }}>
                   {[
                     { label: 'Tanggal', value: formatDate(request.date) },
-                    { label: 'Pemohon', value: request.requesterName || '-' },
-                    { label: 'Vendor', value: request.vendor || '-' },
-                    { label: 'Divisi', value: request.division || '-' },
-                    { label: 'Doc Type', value: getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type') || '-' },
-                    { label: 'Ext Doc No', value: getRequestValue(request, 'externalDocumentNumber', 'extDocNumber', 'ext_doc_number') || '-' },
-                    { label: 'Internal PO', value: getRequestValue(request, 'internalPoNumber', 'internal_po_number') || '-' },
-                    { label: 'Payment', value: getRequestValue(request, 'paymentMethod', 'payment_method') || '-' },
-                    { label: 'Bank', value: getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank') || '-' },
-                    { label: 'Bank Account', value: getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account') || '-' },
+                    { label: 'Pemohon', value: formatDisplayValue(request.requesterName) },
+                    { label: 'Vendor', value: formatDisplayValue(request.vendor) },
+                    { label: 'Divisi', value: formatDisplayValue(request.division) },
+                    { label: 'Doc Type', value: formatDisplayValue(getRequestValue(request, 'externalDocumentType', 'extDocType', 'ext_doc_type')) },
+                    { label: 'Ext Doc No', value: formatDisplayValue(getRequestValue(request, 'externalDocumentNumber', 'extDocNumber', 'ext_doc_number')) },
+                    { label: 'Internal PO', value: formatDisplayValue(getRequestValue(request, 'internalPoNumber', 'internal_po_number')) },
+                    { label: 'Payment', value: formatDisplayValue(getRequestValue(request, 'paymentMethod', 'payment_method')) },
+                    { label: 'Bank', value: formatDisplayValue(getRequestValue(request, 'destinationBank', 'bankTujuan', 'destination_bank')) },
+                    { label: 'Bank Account', value: formatDisplayValue(getRequestValue(request, 'destinationBankAccount', 'rekBankTujuan', 'destination_bank_account')) },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.04em', marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500 }}>{value}</div>
+                      <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500, whiteSpace: 'normal', wordBreak: 'break-word' }}>{value}</div>
                     </div>
                   ))}
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -630,7 +670,7 @@ export default function DataTableApprovalFrp({
                               onClick={(e) => { e.stopPropagation(); copyFrpNo(request.id, request.frpNo); }}
                               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                             >
-                              <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem', marginBottom: '2px', wordBreak: 'break-word' }}>{request.frpNo}</span>
+                              <span style={{ fontWeight: 700, color: '#1e40af', fontSize: '0.85rem', marginBottom: '2px', wordBreak: 'break-word' }}>{formatDisplayValue(request.frpNo)}</span>
                               <span className="material-icons-round" style={{ fontSize: '14px', color: copiedFrpId === request.id ? '#15803d' : '#94a3b8' }}>
                                 {copiedFrpId === request.id ? 'check' : 'content_copy'}
                               </span>
@@ -643,8 +683,8 @@ export default function DataTableApprovalFrp({
                       {/* 2. Pemohon & Vendor */}
                       <td style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.45 }}>
                         <DataTableIdentity
-                          title={request.requesterName || '-'}
-                          subtitle={request.vendor || '-'}
+                          title={formatDisplayValue(request.requesterName)}
+                          subtitle={formatDisplayValue(request.vendor)}
                           badge={<DivisionBadge division={request.division} />}
                         />
                       </td>
