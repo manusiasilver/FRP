@@ -193,6 +193,33 @@ const getUserJobLevelRank = user => {
 const PROCESS_ACCESS_DIVISIONS = new Set(['IT', 'HCGA'])
 
 const normalizeDivision = value => String(value || '').trim().toUpperCase()
+const collectUserDivisions = user => {
+  const divisions = []
+  const seen = new Set()
+  const addDivision = value => {
+    const normalized = normalizeDivision(value)
+    if (!normalized || seen.has(normalized)) return
+    seen.add(normalized)
+    divisions.push(normalized)
+  }
+
+  addDivision(user?.departmentClass)
+  addDivision(user?.selectedDivision)
+  addDivision(user?.departmentName)
+
+  ;(user?.allAssignments || []).forEach((assignment) => {
+    addDivision(assignment?.dept_class || assignment?.departmentClass || assignment?.class)
+    addDivision(assignment?.dept_name || assignment?.departmentName || assignment?.department_name)
+    ;(assignment?.classes || []).forEach(addDivision)
+  })
+
+  ;(user?.departments || []).forEach((department) => {
+    addDivision(department?.class)
+    addDivision(department?.name)
+  })
+
+  return divisions
+}
 
 export default function RpApprovalPage() {
   const { pathname } = useLocation()
@@ -445,11 +472,20 @@ export default function RpApprovalPage() {
   const userJobLevelName = String(user?.selectedJobLevel || user?.jobLevelName || '').toLowerCase()
   const isAdmin = user?.role === 'administrator'
   const userDivision = user.selectedDivision || ''
-  const normalizedUserDivision = normalizeDivision(userDivision)
+  const userDivisions = collectUserDivisions(user)
   const canTakeApprovalAction = userJobLevelRank >= 2 && !/\bstaff\b/.test(userJobLevelName)
   const isProcessDivision = useCallback(
-    division => PROCESS_ACCESS_DIVISIONS.has(normalizedUserDivision) && normalizedUserDivision === normalizeDivision(division),
-    [normalizedUserDivision],
+    division => {
+      const normalizedTargetDivision = normalizeDivision(division)
+      if (!normalizedTargetDivision) return false
+
+      return userDivisions.some(
+        currentDivision =>
+          PROCESS_ACCESS_DIVISIONS.has(currentDivision) &&
+          currentDivision === normalizedTargetDivision,
+      )
+    },
+    [userDivisions],
   )
 
   const pagination = D.pagination || { total: 0, page: 1, limit: rowsPerPage, totalPages: 1 }

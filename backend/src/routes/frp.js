@@ -35,6 +35,7 @@ const {
     filterDepartmentsForUser,
     filterBudgetsForUser,
 } = require('../services/frpService');
+const { getUserScopedDivisions, hasUserDivisionAccess } = require('../middleware/scope');
 
 const router = express.Router();
 
@@ -1156,8 +1157,9 @@ router.post('/api/frp/:id/:action', checkAuth, async (req, res) => {
             }
 
             const frpDeptClass = frpRows[0].department_class;
-            const isIT = u.selectedDivision === 'IT';
-            const isOwnDivision = u.selectedDivision === frpDeptClass;
+            const userDivisions = getUserScopedDivisions(u, u.selectedCompany || u.companyName || u.company);
+            const isIT = userDivisions.includes('IT');
+            const isOwnDivision = hasUserDivisionAccess(u, frpDeptClass, u.selectedCompany || u.companyName || u.company);
             const canRevert = u.role === 'administrator' || isIT || (Number(u.jobLevelRank || 0) >= 3 && isOwnDivision);
 
             if (!canRevert) {

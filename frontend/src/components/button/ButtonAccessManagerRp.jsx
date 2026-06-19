@@ -46,21 +46,45 @@ export default function ButtonAccessManagerRp({
   if (!showActions || !rp) return null
 
   const normalizeDivision = value => String(value || '').trim().toUpperCase()
+  const userDivisions = []
+  const seenDivisions = new Set()
+  const addUserDivision = value => {
+    const normalizedDivision = normalizeDivision(value)
+    if (!normalizedDivision || seenDivisions.has(normalizedDivision)) return
+    seenDivisions.add(normalizedDivision)
+    userDivisions.push(normalizedDivision)
+  }
+
   const userJobLevelName = String(user?.selectedJobLevel || user?.jobLevelName || '').toLowerCase()
   const isManagerJobLevel = /\bmanager\b/.test(userJobLevelName)
   const canTakeManagerAction = canTakeApprovalAction || userJobLevelRank >= 2 || isManagerJobLevel
-  const userDivision = normalizeDivision(user?.departmentClass || user?.selectedDivision || user?.departmentName)
+
+  addUserDivision(user?.departmentClass)
+  addUserDivision(user?.selectedDivision)
+  addUserDivision(user?.departmentName)
+  ;(user?.allAssignments || []).forEach((assignment) => {
+    addUserDivision(assignment?.dept_class || assignment?.departmentClass || assignment?.class)
+    addUserDivision(assignment?.dept_name || assignment?.departmentName || assignment?.department_name)
+    ;(assignment?.classes || []).forEach(addUserDivision)
+  })
+  ;(user?.departments || []).forEach((department) => {
+    addUserDivision(department?.class)
+    addUserDivision(department?.name)
+  })
+
   const requesterDivision = normalizeDivision(rp.departmentClass || rp.divisi || rp.departmentName)
   const processDivision = normalizeDivision(rp.processedByDepartment || rp.diprosesOleh)
-  const isITManager = userDivision === 'IT'
-  const canFinalApproveByDivision = !!userDivision && !!processDivision && userDivision === processDivision
+  const hasDivisionAccess = division => !!division && userDivisions.includes(division)
+  const isITManager = hasDivisionAccess('IT')
+  const hasRequesterDivisionAccess = hasDivisionAccess(requesterDivision)
+  const canFinalApproveByDivision = hasDivisionAccess(processDivision)
   const isManagerActionDisabledByDivision =
     rp.status === 'waiting_manager' &&
     canTakeManagerAction &&
     isITManager &&
-    requesterDivision !== 'IT'
+    !hasRequesterDivisionAccess
 
-  const canManagerApprove = rp.status === 'waiting_manager' && canTakeManagerAction
+  const canManagerApprove = rp.status === 'waiting_manager' && canTakeManagerAction && hasRequesterDivisionAccess
   const canDivisionProcess = rp.status === 'division_review' && userJobLevelRank > 1 && canProcessThisRp
   const canFinalApprove = rp.status === 'final_review' && canTakeManagerAction && canFinalApproveByDivision
   const showDivisionReviewDetailOnly =
@@ -69,7 +93,11 @@ export default function ButtonAccessManagerRp({
     !canDivisionProcess
   const showRevertAction = rp.canRevert
   const showReadOnlyDropdown =
-    !canTakeManagerAction &&
+    (
+      !canTakeManagerAction ||
+      (rp.status === 'waiting_manager' && !hasRequesterDivisionAccess) ||
+      (rp.status === 'final_review' && !canFinalApproveByDivision)
+    ) &&
     (userJobLevelRank > 1 || isManagerJobLevel) &&
     (rp.status === 'waiting_manager' || rp.status === 'final_review')
   const showDropdownDetail = rp.status === 'waiting_manager' || rp.status === 'final_review' || showReadOnlyDropdown

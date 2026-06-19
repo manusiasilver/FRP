@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const https = require('https');
 const { USER_SQL } = require('../config/constants');
 const { normalizeCompanyCode, sameCompanyName } = require('../utils/company');
+const { getUserScopedDivisions, hasUserDivisionAccess } = require('../middleware/scope');
 
 // ============================================================
 // USER / SESSION HELPERS
@@ -456,8 +457,8 @@ function isManagerJobLevel(jobLevel) {
 function isDivisionRestrictedFrpApprover(user) {
     if (!user || user.role === 'administrator') return false;
 
-    const userDivision = getFrpApprovalUserDivision(user);
-    if (userDivision === 'IT') return false;
+    const userDivisions = getUserScopedDivisions(user);
+    if (userDivisions.includes('IT')) return false;
 
     const jobLevel = getFrpApprovalUserJobLevel(user);
     if (isDirectorOrCommissionerJobLevel(jobLevel)) return false;
@@ -474,8 +475,8 @@ function canApproveFrpRequest(user, request) {
     const userCompany = user.selectedCompany || user.companyName || user.company || '';
     if (!sameCompanyName(requestCompany, userCompany)) return false;
 
-    const userDivision = getFrpApprovalUserDivision(user);
-    if (userDivision === 'IT') return true;
+    const userDivisions = getUserScopedDivisions(user, requestCompany);
+    if (userDivisions.includes('IT')) return true;
 
     const jobLevel = getFrpApprovalUserJobLevel(user);
     if (isDirectorOrCommissionerJobLevel(jobLevel)) return true;
@@ -484,13 +485,14 @@ function canApproveFrpRequest(user, request) {
     if (!isManagerLevel) return false;
 
     const requestDivision = getFrpApprovalRequestDivision(request);
-    return Boolean(userDivision && requestDivision && userDivision === requestDivision);
+    return Boolean(requestDivision && hasUserDivisionAccess(user, requestDivision, requestCompany));
 }
 
 function enrichReqWithRevert(r, u) {
-    const isIT = u.selectedDivision === 'IT';
+    const userDivisions = getUserScopedDivisions(u, r.companyName || r.company_name || r.company);
+    const isIT = userDivisions.includes('IT');
     const frpDeptClass = r.department_class || r.departmentClass || '';
-    const isOwnDivision = u.selectedDivision === frpDeptClass;
+    const isOwnDivision = hasUserDivisionAccess(u, frpDeptClass, r.companyName || r.company_name || r.company);
 
     return {
         ...r,

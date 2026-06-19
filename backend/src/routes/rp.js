@@ -3,7 +3,7 @@ const { checkAuth } = require('../middleware/auth');
 const { readJson, writeJson } = require('../utils/json');
 const { getAllEmployees, getCompanies, getDepartmentRows, getDeptCode, getCompanyId, getDeptId, fetchAllFrpRequests, fetchAllRpRequests } = require('../services/dbService');
 const { sameCompanyName } = require('../utils/company');
-const { isRpInUserScope, canViewRpProcessDivision } = require('../middleware/scope');
+const { getUserScopedDivisions, hasUserDivisionAccess, canUserViewRpProcessDivision } = require('../middleware/scope');
 const db = require('../../db');
 const crypto = require('crypto');
 
@@ -381,39 +381,50 @@ router.get('/rp', checkAuth, (req, res) => res.sendSPA());
 // All other departments must go through division_review → final_review → approved
 const SHORT_FLOW_DEPARTMENTS = ['IT', 'HCGA', 'IT & HCGA'];
 
-function isShortFlowDepartment(client, user) {
-    const departmentClass = String(
-        user.departmentClass || user.selectedDivision || ''
-    ).trim().toUpperCase();
+function isShortFlowDepartmentClass(departmentClass) {
+    const normalizedDepartmentClass = String(departmentClass || '').trim().toUpperCase();
 
     return SHORT_FLOW_DEPARTMENTS.some(
-        d => d.toUpperCase() === departmentClass
+        d => d.toUpperCase() === normalizedDepartmentClass
+    );
+}
+
+function isShortFlowDepartment(client, user) {
+    return isShortFlowDepartmentClass(
+        user.departmentClass || user.selectedDivision || ''
     );
 }
 
 async function getRpLookScope(user) {
     if (user.role === 'administrator') return 'all';
 
-    const departmentClass = String(
-        user.departmentClass || user.selectedDivision || ''
-    ).trim();
+    const departmentClasses = getUserScopedDivisions(
+        user,
+        user.selectedCompany || user.companyName || user.company || ''
+    );
+
+    if (!departmentClasses.length) return 'own';
 
     const [rows] = await db.query(`
         SELECT 1 FROM budget_access_policies
         WHERE module = 'RP'
           AND flow = 'LOOK'
-          AND department_class = ?
+          AND department_class IN (?)
           AND is_active = 1
         LIMIT 1
-    `, [departmentClass]);
+    `, [departmentClasses]);
 
-    if (rows.length > 0) return 'processor'; // hanya RP yang mengarah ke dept mereka
-    return 'own'; // hanya RP dari dept mereka sendiri
+    if (rows.length > 0) return 'processor';
+    return 'own';
 }
 
 function enrichRpWithRevert(r, u) {
     const isAdmin = u.role === 'administrator';
     const rank = Number(u.jobLevelRank || 0);
+    const companyName = r.companyName || r.company_name || '';
+    const requesterDivision = r.divisi || r.departmentClass || r.department_name || '';
+    const processDivision = r.diprosesOleh || r.processedByDepartment || requesterDivision;
+    const isShortFlow = isShortFlowDepartmentClass(requesterDivision);
 
     // Revert dari waiting_manager → tidak ada (manager approve/reject langsung)
     
@@ -421,13 +432,13 @@ function enrichRpWithRevert(r, u) {
     // oleh: admin, atau rank >= 1 dari processor department
     const canRevertDivisionReview =
         r.status === 'division_review' &&
-        (isAdmin || (rank >= 1 && u.selectedDivision === r.diprosesOleh));
+        (isAdmin || (rank >= 1 && hasUserDivisionAccess(u, processDivision, companyName)));
 
     // Revert dari final_review → division_review  
     // oleh: admin, atau rank >= 1 dari processor department
     const canRevertFinalReview =
         r.status === 'final_review' &&
-        (isAdmin || (rank >= 1 && u.selectedDivision === r.diprosesOleh));
+        (isAdmin || (rank >= 1 && hasUserDivisionAccess(u, processDivision, companyName)));
 
     // Revert dari approved → waiting_manager
     // oleh: admin, atau rank >= 1 dari department terkait (IT/HCGA short flow: dept requester, 4-step: processor dept)
@@ -435,7 +446,11 @@ function enrichRpWithRevert(r, u) {
         r.status === 'approved' &&
         (isAdmin || (
             rank >= 1 &&
-            (u.selectedDivision === r.diprosesOleh || u.selectedDivision === r.divisi)
+            hasUserDivisionAccess(
+                u,
+                isShortFlow ? requesterDivision : processDivision,
+                companyName
+            )
         ));
 
     return {
@@ -449,18 +464,23 @@ function enrichRpWithRevert(r, u) {
 }
 
 async function hasRpBudgetPolicy(client, user) {
-    const departmentClass = getUserDepartmentClass(user);
+    const departmentClasses = getUserScopedDivisions(
+        user,
+        user.selectedCompany || user.companyName || user.company || ''
+    );
+
+    if (!departmentClasses.length) return false;
 
     const [rows] = await client.query(`
         SELECT id
         FROM budget_access_policies
         WHERE module = 'RP'
           AND flow = 'CREATE'
-          AND department_class = ?
+          AND department_class IN (?)
           AND can_cross_department_budget = 1
           AND is_active = 1
         LIMIT 1
-    `, [departmentClass]);
+    `, [departmentClasses]);
 
     return rows.length > 0;
 }
@@ -1059,32 +1079,33 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
 
     let reqs = await fetchAllRpRequests();
     const lookScope = await getRpLookScope(u);
-    const userDivision = u.selectedDivision || u.departmentClass;
-
-    const isApprovedScope = r => u.role === 'administrator' || (
-        sameCompanyName(r.companyName, u.selectedCompany) &&
-        (
-            normalizeScopeText(r.divisi) === normalizeScopeText(userDivision) ||
-            canViewRpProcessDivision(userDivision, r.diprosesOleh || r.divisi)
+    const hasOwnDivisionScope = (request) => (
+        sameCompanyName(request.companyName, u.selectedCompany || u.companyName) &&
+        hasUserDivisionAccess(u, request.divisi || request.departmentClass, request.companyName)
+    );
+    const hasProcessorScope = (request) => (
+        sameCompanyName(request.companyName, u.selectedCompany || u.companyName) &&
+        canUserViewRpProcessDivision(
+            u,
+            request.diprosesOleh || request.processedByDepartment || request.divisi,
+            request.companyName
         )
     );
-
-    const isPendingScope = r => {
-        if (u.role === 'administrator') return true;
-        if (!sameCompanyName(r.companyName, u.selectedCompany)) return false;
-
-        const isOwnDivision = normalizeScopeText(r.divisi) === normalizeScopeText(userDivision);
-        if (isOwnDivision) return true;
-
-        return normalizeScopeText(userDivision) === 'IT' &&
-            lookScope === 'processor' &&
-            canViewRpProcessDivision(userDivision, r.diprosesOleh || r.divisi);
-    };
+    const isPendingScope = request =>
+        u.role === 'administrator' ||
+        hasOwnDivisionScope(request) ||
+        (lookScope === 'processor' && hasProcessorScope(request));
+    const isProcessorStageScope = request =>
+        u.role === 'administrator' ||
+        (lookScope === 'processor' ? hasProcessorScope(request) : hasOwnDivisionScope(request));
+    const isApprovedScope = request =>
+        u.role === 'administrator' ||
+        (lookScope === 'processor' ? hasProcessorScope(request) : hasOwnDivisionScope(request));
 
     // badge counts (sebelum view filter)
     const pendingCount         = reqs.filter(r => r.status === 'waiting_manager' && isPendingScope(r)).length;
-    const processCount         = reqs.filter(r => r.status === 'division_review' && isRpInUserScope(r, u, true)).length;
-    const processApprovalCount = reqs.filter(r => r.status === 'final_review' && isRpInUserScope(r, u, true)).length;
+    const processCount         = reqs.filter(r => r.status === 'division_review' && isProcessorStageScope(r)).length;
+    const processApprovalCount = reqs.filter(r => r.status === 'final_review' && isProcessorStageScope(r)).length;
     const approvedCount        = reqs.filter(r =>
         ['approved', 'REJECTED', 'CREATED_FRP'].includes(r.status) && isApprovedScope(r)
     ).length;
@@ -1095,26 +1116,15 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
         if (u.role !== 'administrator') reqs = reqs.filter(r => isApprovedScope(r));
     } else if (view === 'process') {
         reqs = reqs.filter(r => r.status === 'division_review');
-        if (u.role !== 'administrator') reqs = reqs.filter(r => isRpInUserScope(r, u, true));
+        if (u.role !== 'administrator') reqs = reqs.filter(r => isProcessorStageScope(r));
     } else if (view === 'process-approval') {
         reqs = reqs.filter(r => r.status === 'final_review');
-        if (u.role !== 'administrator') reqs = reqs.filter(r => isRpInUserScope(r, u, true));
+        if (u.role !== 'administrator') reqs = reqs.filter(r => isProcessorStageScope(r));
     } else if (view === 'all') {
         if (u.role !== 'administrator') reqs = reqs.filter(r => isApprovedScope(r));
     } else {
         reqs = reqs.filter(r => r.status === 'waiting_manager');
         if (u.role !== 'administrator') reqs = reqs.filter(r => isPendingScope(r));
-    }
-
-    const isPendingView = view === 'pending';
-
-    if (lookScope === 'own') {
-        reqs = reqs.filter(r => sameCompanyName(r.companyName, u.selectedCompany) && r.divisi === u.selectedDivision);
-    } else if (lookScope === 'processor' && !isPendingView) {
-        reqs = reqs.filter(r =>
-            sameCompanyName(r.companyName, u.selectedCompany) &&
-            canViewRpProcessDivision(u.selectedDivision || u.departmentClass, r.diprosesOleh || r.divisi)
-        );
     }
 
     // enrich + total per request
@@ -1172,7 +1182,8 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
     const total      = reqs.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const safePage   = Math.min(page, totalPages);
-    const requests   = reqs.slice((safePage - 1) * limit, safePage * limit);
+    const pagedRequests = reqs.slice((safePage - 1) * limit, safePage * limit);
+    const requests = pagedRequests;
 
     const canApprove = isManagerLevel(u);
 
@@ -1267,29 +1278,19 @@ router.get('/api/rp/:id', checkAuth, async (req, res) => {
     }
 });
 
-function getUserDepartmentClass(user) {
-    return String(
-        user.departmentClass ||
-        user.selectedDivision ||
-        user.departmentName ||
-        ''
-    ).trim();
-}
-
 function isManagerLevel(user) {
     return Number(user.jobLevelRank || 0) >= 4;
 }
 
-function sameText(a, b) {
-    return String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
-}
-
 function canAccessRpFinalApproval(user, rp) {
     const userJobLevelRank = Number(user.jobLevelRank || 0);
-    const userDepartmentClass = getUserDepartmentClass(user);
     const processDepartmentClass = String(rp?.processedByDepartment || '').trim();
 
-    return userJobLevelRank >= 2 && sameText(userDepartmentClass, processDepartmentClass);
+    return userJobLevelRank >= 2 && hasUserDivisionAccess(
+        user,
+        processDepartmentClass,
+        rp?.companyName || rp?.company_name || ''
+    );
 }
 
 async function getAllowedRpProcessorDepartments(client) {
@@ -1330,7 +1331,6 @@ router.post('/api/rp/:id/:action', checkAuth, async (req, res) => {
         const u = req.session.user;
 
         const isAdmin = u.role === 'administrator';
-        const userDepartmentClass = getUserDepartmentClass(u);
         const userCanProcessRp = await hasRpBudgetPolicy(client, u);
 
         // ============================================================
@@ -1355,7 +1355,7 @@ router.post('/api/rp/:id/:action', checkAuth, async (req, res) => {
                 });
             }
 
-            if (!sameText(userDepartmentClass, rp.departmentClass)) {
+            if (!hasUserDivisionAccess(u, rp.departmentClass, rp.companyName)) {
                 await client.rollback();
                 return res.status(403).json({
                     success: false,
@@ -1374,7 +1374,7 @@ router.post('/api/rp/:id/:action', checkAuth, async (req, res) => {
                 });
             }
 
-            if (!sameText(userDepartmentClass, rp.processedByDepartment)) {
+            if (!hasUserDivisionAccess(u, rp.processedByDepartment, rp.companyName)) {
                 await client.rollback();
                 return res.status(403).json({
                     success: false,
@@ -1401,7 +1401,7 @@ router.post('/api/rp/:id/:action', checkAuth, async (req, res) => {
                 });
             }
 
-            if (!sameText(userDepartmentClass, rp.processedByDepartment)) {
+            if (!hasUserDivisionAccess(u, rp.processedByDepartment, rp.companyName)) {
                 await client.rollback();
                 return res.status(403).json({
                     success: false,
@@ -1650,8 +1650,8 @@ router.post('/api/rp/:id/:action', checkAuth, async (req, res) => {
             const rpUser = { departmentClass: rp.departmentClass, selectedDivision: rp.departmentClass };
             const shortFlow = await isShortFlowDepartment(client, rpUser);
             const isOwnManagerDept = shortFlow
-                ? u.selectedDivision === rp.departmentClass
-                : u.selectedDivision === rp.processedByDepartment;
+                ? hasUserDivisionAccess(u, rp.departmentClass, rp.companyName)
+                : hasUserDivisionAccess(u, rp.processedByDepartment, rp.companyName);
 
             const canRevertApproved =
                 isAdmin ||

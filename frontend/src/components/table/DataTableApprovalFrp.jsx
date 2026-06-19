@@ -701,12 +701,14 @@ export default function DataTableApprovalFrp({
 
                       {/* 2. Pemohon & Vendor */}
                       <td style={{ ...td, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.45 }}>
-                        <DataTableIdentity
-                          title={formatDisplayValue(request.requesterName)}
-                          subtitle={formatDisplayValue(request.vendor)}
-                          badge={<DivisionBadge division={request.division} />}
-                          truncateTitle
-                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
+                          <DataTableIdentity
+                            title={formatDisplayValue(request.requesterName)}
+                            subtitle={formatDisplayValue(request.vendor)}
+                            badge={<DivisionBadge division={request.division} />}
+                            truncateTitle
+                          />
+                        </div>
                       </td>
 
                       {/* 3. Description */}
