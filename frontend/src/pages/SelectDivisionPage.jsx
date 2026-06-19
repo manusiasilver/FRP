@@ -4,6 +4,24 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import DialogChangeAccess from '../components/Dialog/DialogChangeAccess.jsx'
 
+const getCompanyNameFromOption = (raw) => {
+  if (typeof raw === 'string') return raw.trim()
+
+  const explicitCompanyName = String(raw?.companyName || raw?.company || '').trim()
+  if (explicitCompanyName) return explicitCompanyName
+
+  const looksLikeDepartment =
+    raw?.class ||
+    raw?.dept_class ||
+    raw?.departmentClass ||
+    raw?.deptName ||
+    raw?.departmentName ||
+    raw?.department_id
+
+  if (looksLikeDepartment) return ''
+  return String(raw?.name || '').trim()
+}
+
 const normalizeDivision = (assignment, index = 0) => {
   const className = assignment?.class || assignment?.dept_class || assignment?.departmentClass || ''
   const name = assignment?.name || assignment?.companyName || assignment?.company || assignment?.deptName || assignment?.departmentName || ''
@@ -27,10 +45,10 @@ const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
   const selectedCompany = String(userInfo?.selectedCompany || '').trim()
   const assignmentOptions = Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []
   const departmentOptions = (Array.isArray(userInfo?.departments) ? userInfo.departments : []).map((department) => ({
-        ...department,
-        name: department?.companyName || department?.company || selectedCompany,
-        class: department?.class || department?.dept_class || department?.name || '',
-      }))
+    ...department,
+    name: department?.companyName || department?.company || selectedCompany,
+    class: department?.class || department?.dept_class || department?.name || '',
+  }))
   const assignments = [...assignmentOptions, ...departmentOptions]
 
   const filteredAssignments = selectedCompany && !includeAllCompanies
@@ -50,43 +68,6 @@ const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
   })
 
   const optionMap = new Map(divisions.map((division) => [`${division.name}::${division.class}`, division]))
-
-  if (includeAllCompanies && divisions.length > 0) {
-    const companyMap = new Map()
-
-    ;[
-      ...(Array.isArray(userInfo?.companies) ? userInfo.companies : []),
-      ...(Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []),
-      ...(Array.isArray(userInfo?.departments) ? userInfo.departments : []),
-    ].forEach((raw) => {
-      const name = String(raw?.name || raw?.companyName || raw?.company || '').trim()
-      if (!name || companyMap.has(name)) return
-
-      companyMap.set(name, {
-        id: raw?.companyId || raw?.id || '',
-        code: raw?.companyCode || raw?.code || '',
-        name,
-      })
-    })
-
-    const templates = [...new Map(divisions.map((division) => [division.class, division])).values()]
-    companyMap.forEach((company) => {
-      const hasCompanyDivision = [...optionMap.values()].some((division) => division.name === company.name)
-      if (hasCompanyDivision) return
-
-      templates.forEach((template) => {
-        optionMap.set(`${company.name}::${template.class}`, {
-          ...template,
-          id: company.id || template.id,
-          code: company.code || template.code,
-          name: company.name,
-          companyId: company.id || template.companyId,
-          companyCode: company.code || template.companyCode,
-          companyName: company.name,
-        })
-      })
-    })
-  }
 
   return [...optionMap.values()]
 }
@@ -112,10 +93,7 @@ const getCompanyOptionsFromUserInfo = (userInfo) => {
     }
 
     const name = String(
-      raw?.name ||
-      raw?.companyName ||
-      raw?.company ||
-      '',
+      getCompanyNameFromOption(raw),
     ).trim()
 
     if (!name || optionMap.has(name)) return
@@ -147,6 +125,24 @@ const getCompanyOptionsFromUserInfo = (userInfo) => {
 
     return a.name.localeCompare(b.name, 'id')
   })
+}
+
+const getAccessOptionLabel = (division) => {
+  const companyName = String(
+    division?.name ||
+    division?.companyName ||
+    division?.company ||
+    '',
+  ).trim()
+  const className = String(
+    division?.class ||
+    division?.dept_class ||
+    division?.departmentClass ||
+    '',
+  ).trim()
+
+  if (companyName && className) return `${companyName} (${className})`
+  return companyName || className || division?.label || '-'
 }
 
 export default function SelectDivisionPage({
@@ -223,10 +219,11 @@ export default function SelectDivisionPage({
     [includeAllCompanies, userInfo],
   )
   const hasMultipleCompanies = companyOptions.length > 1
+  const showCombinedAccessOptions = includeAllCompanies || hasMultipleCompanies
   const filteredDivisions = useMemo(() => {
-    if (!selectedCompany) return divisions
+    if (showCombinedAccessOptions || !selectedCompany) return divisions
     return divisions.filter((division) => division.name === selectedCompany)
-  }, [divisions, selectedCompany])
+  }, [divisions, selectedCompany, showCombinedAccessOptions])
 
   useEffect(() => {
     if (!isDebugAccessEnabled || !isOpen) return
@@ -294,7 +291,10 @@ export default function SelectDivisionPage({
   useEffect(() => {
     if (!isOpen || filteredDivisions.length === 0) return
 
-    const selectedItem = filteredDivisions.find((division) => division.class === selectedDivision)
+    const selectedItem = filteredDivisions.find((division) => (
+      division.class === selectedDivision &&
+      (!showCombinedAccessOptions || division.name === selectedCompany)
+    ))
     if (selectedItem) {
       if (selectedItem.jobLevel !== selectedJobLevel) {
         setSelectedJobLevel(selectedItem.jobLevel || '')
@@ -303,18 +303,16 @@ export default function SelectDivisionPage({
     }
 
     const nextDivision = filteredDivisions[0]
+    if (showCombinedAccessOptions) {
+      setSelectedCompany(nextDivision.name || '')
+    }
     setSelectedDivision(nextDivision.class || '')
     setSelectedJobLevel(nextDivision.jobLevel || '')
-  }, [filteredDivisions, isOpen, selectedDivision, selectedJobLevel])
+  }, [filteredDivisions, isOpen, selectedCompany, selectedDivision, selectedJobLevel, showCombinedAccessOptions])
 
   const handleSelect = async () => {
-    if (!selectedCompany && hasMultipleCompanies) {
-      setSubmitError('Pilih company terlebih dahulu.')
-      return
-    }
-
     if (!selectedDivision) {
-      setSubmitError('Pilih divisi terlebih dahulu.')
+      setSubmitError(showCombinedAccessOptions ? 'Pilih akses terlebih dahulu.' : 'Pilih divisi terlebih dahulu.')
       return
     }
 
@@ -387,8 +385,8 @@ export default function SelectDivisionPage({
   return createPortal(
     <DialogChangeAccess
       isOpen
-      title={hasMultipleCompanies ? 'Pilih Akses' : 'Pilih Divisi'}
-      eyebrow={hasMultipleCompanies ? 'Select Company & Division' : 'Select Division'}
+      title={showCombinedAccessOptions ? 'Pilih Akses' : 'Pilih Divisi'}
+      eyebrow={showCombinedAccessOptions ? 'Select Access' : 'Select Division'}
       labelBatal="Batal"
       labelSimpan="Pilih"
       onClose={handleClose}
@@ -396,8 +394,8 @@ export default function SelectDivisionPage({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <p style={{ margin: 0, color: '#64748b', lineHeight: 1.6 }}>
-          {hasMultipleCompanies
-            ? 'Pilih company dan divisi Anda untuk melanjutkan.'
+          {showCombinedAccessOptions
+            ? 'Pilih akses company dan divisi Anda untuk melanjutkan.'
             : 'Pilih divisi dan level jabatan Anda untuk melanjutkan.'}
         </p>
 
@@ -445,71 +443,34 @@ export default function SelectDivisionPage({
 
         {!loading && divisions.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {hasMultipleCompanies && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8' }}>
-                  Company
-                </div>
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {companyOptions.map((company, index) => {
-                    const isSelected = selectedCompany === company.name
-
-                    return (
-                      <button
-                        key={`${company.id || company.code || company.name}-${index}`}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCompany(company.name || '')
-                          setSubmitError('')
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          width: '100%',
-                          padding: '14px 16px',
-                          borderRadius: '16px',
-                          border: `1.5px solid ${isSelected ? '#2563eb' : '#e2e8f0'}`,
-                          background: isSelected ? '#eff6ff' : '#ffffff',
-                          color: isSelected ? '#1d4ed8' : '#334155',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.2s ease',
-                          boxShadow: isSelected ? '0 10px 24px rgba(37, 99, 235, 0.08)' : 'none',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.96rem' }}>
-                            {company.name}
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: isSelected ? '#2563eb' : '#94a3b8', marginTop: '2px' }}>
-                            {company.code || 'Company Access'}
-                          </div>
-                        </div>
-                        <span
-                          className="material-icons-round"
-                          style={{ color: isSelected ? '#2563eb' : '#cbd5e1', fontSize: '20px' }}
-                        >
-                          {isSelected ? 'check_circle' : 'business'}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginTop: hasMultipleCompanies ? '4px' : 0 }}>
-              Divisi
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94a3b8', marginTop: showCombinedAccessOptions ? '4px' : 0 }}>
+              {showCombinedAccessOptions ? 'Akses' : 'Divisi'}
             </div>
             {filteredDivisions.length === 0 && (
               <div style={{ padding: '12px 14px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b' }}>
-                Tidak ada divisi untuk company yang dipilih.
+                {showCombinedAccessOptions ? 'Tidak ada akses yang tersedia.' : 'Tidak ada divisi untuk company yang dipilih.'}
               </div>
             )}
             {filteredDivisions.map((division, index) => {
               const isSelected = selectedDivision === division.class && selectedCompany === division.name
+              const companyLabel = String(
+                division.name ||
+                division.companyName ||
+                division.company ||
+                '',
+              ).trim()
+              const divisionLabel = String(
+                division.class ||
+                division.dept_class ||
+                division.departmentClass ||
+                '',
+              ).trim()
+              const primaryLabel = showCombinedAccessOptions
+                ? (companyLabel || getAccessOptionLabel(division))
+                : (division.label || division.class || division.name)
+              const secondaryLabel = showCombinedAccessOptions
+                ? `Division: ${divisionLabel || '-'}`
+                : (division.jobLevel || selectedJobLevel || '-')
 
               return (
                 <button
@@ -542,10 +503,10 @@ export default function SelectDivisionPage({
                 >
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '0.98rem' }}>
-                      {hasMultipleCompanies ? (division.class || division.label || division.name) : (division.label || division.class || division.name)}
+                      {primaryLabel}
                     </div>
                     <div style={{ fontSize: '0.82rem', color: isSelected ? '#15803d' : '#94a3b8', marginTop: '2px' }}>
-                      {division.jobLevel || selectedJobLevel || '-'}
+                      {secondaryLabel}
                     </div>
                   </div>
                   <span
