@@ -137,7 +137,7 @@ export default function SelectDivisionPage({
   const [selectedDivision, setSelectedDivision] = useState('')
   const [selectedJobLevel, setSelectedJobLevel] = useState('')
   const [submitError, setSubmitError] = useState('')
-  const resolvedUserInfoEndpoint = userInfoEndpoint || '/api/user/info'
+  const resolvedUserInfoEndpoint = userInfoEndpoint || '/api/auth/me'
   const isDebugAccessEnabled =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('debug-access') === '1'

@@ -6,6 +6,7 @@ export default function SelectCompanyPage() {
       isOpen
       includeAllCompanies
       forceFetchUserInfo
+      userInfoEndpoint="/api/auth/me"
     />
   )
 }
