@@ -280,7 +280,7 @@ function Sidebar({
   useEffect(() => {
     let cancelled = false
 
-    api.get('/api/auth/me')
+    api.get(`/api/auth/me?_ts=${Date.now()}`, { cache: 'no-store' })
       .then((data) => {
         if (!cancelled) {
           setSessionUserInfo(data?.user || data || null)

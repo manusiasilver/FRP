@@ -153,15 +153,22 @@ export default function SelectDivisionPage({
 
     let cancelled = false
 
-    fetch(resolvedUserInfoEndpoint)
+    fetch(`${resolvedUserInfoEndpoint}${resolvedUserInfoEndpoint.includes('?') ? '&' : '?'}_ts=${Date.now()}`, {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+      },
+    })
       .then((response) => {
         if (!response.ok) {
           window.location.href = '/'
           throw new Error('Failed to load user info')
         }
 
-        return response.json()
+        return response
       })
+      .then((response) => response.json())
       .then((payload) => {
         if (cancelled) return
 
@@ -316,6 +323,8 @@ export default function SelectDivisionPage({
     try {
       const response = await fetch('/api/auth/select-division', {
         method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company, division: selectedDivision }),
       })
@@ -336,6 +345,27 @@ export default function SelectDivisionPage({
           selectedDivision,
           selectedJobLevel,
         }, { replaceSelection: true })
+      }
+
+      try {
+        const refreshedResponse = await fetch(`${resolvedUserInfoEndpoint}${resolvedUserInfoEndpoint.includes('?') ? '&' : '?'}_ts=${Date.now()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+
+        if (refreshedResponse.ok) {
+          const refreshedPayload = await refreshedResponse.json().catch(() => null)
+          const refreshedUser = refreshedPayload?.user || refreshedPayload || null
+
+          if (refreshedUser) {
+            setUser(refreshedUser, { replaceSelection: true })
+          }
+        }
+      } catch (refreshError) {
+        console.warn('[SelectDivisionPage] Failed to refresh user info after access change', refreshError)
       }
 
       setIsRefreshing(true)

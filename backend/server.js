@@ -60,6 +60,23 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+    if (
+        req.path.startsWith('/api/auth/') ||
+        req.path === '/api/data/select-company' ||
+        req.path === '/api/data/select-division'
+    ) {
+        res.set({
+            'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+            Pragma: 'no-cache',
+            Expires: '0',
+            Vary: 'Cookie, Authorization',
+        });
+    }
+
+    next();
+});
+
 // ============================================================
 // SESSION
 // ============================================================
