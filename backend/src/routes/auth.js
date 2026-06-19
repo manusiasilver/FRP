@@ -86,6 +86,22 @@ function findAssignment(user, requestedCompany, requestedDivision) {
     });
 }
 
+function respondAfterSessionSave(req, res, onSuccess) {
+    req.session.save((error) => {
+        if (error) {
+            console.error('[Auth Session Save Error]', error);
+
+            if (req.path.startsWith('/api/')) {
+                return res.status(500).json({ success: false, error: 'Failed to save session' });
+            }
+
+            return res.redirect('/');
+        }
+
+        return onSuccess();
+    });
+}
+
 // ============================================================
 // AUTH PAGES (HTML redirects)
 // ============================================================
@@ -133,7 +149,7 @@ router.post('/select-company', checkAuth, (req, res) => {
     req.session.user.selectedCompany = req.body.company;
     req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || company?.id || '';
     req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || company?.code || '';
-    res.redirect('/select-division');
+    respondAfterSessionSave(req, res, () => res.redirect('/select-division'));
 });
 
 router.get('/select-division', checkAuth, (req, res) => {
@@ -161,7 +177,7 @@ router.post('/select-division', checkAuth, (req, res) => {
     if (assignment || findCompany(user, requestedCompany)) {
         applySelectedAssignment(req, assignment, requestedCompany, req.body.division);
     }
-    res.redirect('/');
+    respondAfterSessionSave(req, res, () => res.redirect('/'));
 });
 
 router.get('/logout', (req, res) => {
@@ -229,11 +245,11 @@ router.post('/api/auth/select-company', checkAuth, (req, res) => {
     req.session.user.selectedCompany = req.body.company;
     req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || company?.id || '';
     req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || company?.code || '';
-    res.json({
+    respondAfterSessionSave(req, res, () => res.json({
         success: true,
         redirect: '/select-division',
         user: req.session.user,
-    });
+    }));
 });
 
 router.get('/api/data/select-division', checkAuth, (req, res) => {
@@ -278,11 +294,11 @@ router.post('/api/auth/select-division', checkAuth, (req, res) => {
     if (assignment || findCompany(user, requestedCompany)) {
         applySelectedAssignment(req, assignment, requestedCompany, div);
     }
-    res.json({
+    respondAfterSessionSave(req, res, () => res.json({
         success: true,
         redirect: '/',
         user: req.session.user,
-    });
+    }));
 });
 
 module.exports = router;

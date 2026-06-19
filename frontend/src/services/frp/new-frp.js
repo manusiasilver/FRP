@@ -7,7 +7,10 @@ const getDepartments = ()        => api.get('/api/departments')
 const getCompanies   = ()        => api.get('/api/company')
 const getVendors     = ()        => api.get('/api/vendors')
 const getBudgets     = ()        => api.get('/api/frp/budgets')
-const getUserInfo    = ()        => api.get('/api/user/info')
+const getUserInfo    = async ()  => {
+  const data = await api.get('/api/auth/me')
+  return data?.user || data || null
+}
 const getJobLevels   = ()        => api.get('/api/job-levels')
 
 // ── FRP ─────────────────────────────────────────────────────

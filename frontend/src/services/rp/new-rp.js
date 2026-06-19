@@ -4,7 +4,10 @@ import api from '../api'
 const getCompanies       = ()    => api.get('/api/company')
 const getVendors         = ()    => api.get('/api/vendors')
 const getDepartments     = ()    => api.get('/api/departments')
-const getUserInfo        = ()    => api.get('/api/user/info')
+const getUserInfo        = async () => {
+  const data = await api.get('/api/auth/me')
+  return data?.user || data || null
+}
 const getBudgets         = ()    => api.get('/api/rp/budgets')
 const getProcessorDepts  = ()    => api.get('/api/rp/processor-departments')
 const getCrossBudgetDivs = ()    => api.get('/api/rp/cross-budget-divisions')

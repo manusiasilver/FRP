@@ -280,10 +280,10 @@ function Sidebar({
   useEffect(() => {
     let cancelled = false
 
-    api.get('/api/user/info')
+    api.get('/api/auth/me')
       .then((data) => {
         if (!cancelled) {
-          setSessionUserInfo(data || null)
+          setSessionUserInfo(data?.user || data || null)
         }
       })
       .catch(() => {
