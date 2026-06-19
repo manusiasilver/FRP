@@ -5,7 +5,6 @@ export default function SelectCompanyPage() {
     <SelectDivisionPage
       isOpen
       includeAllCompanies
-      userInfoEndpoint="/api/data/select-company"
       forceFetchUserInfo
     />
   )

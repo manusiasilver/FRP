@@ -4,36 +4,31 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
 import DialogChangeAccess from '../components/Dialog/DialogChangeAccess.jsx'
 
-const getCompanyNameFromOption = (raw) => {
-  if (typeof raw === 'string') return raw.trim()
+const getCompanyNameFromDepartment = (department, fallbackCompany = '') => String(
+  department?.companyName ||
+  department?.company ||
+  fallbackCompany ||
+  '',
+).trim()
 
-  const explicitCompanyName = String(raw?.companyName || raw?.company || '').trim()
-  if (explicitCompanyName) return explicitCompanyName
-
-  const looksLikeDepartment =
-    raw?.class ||
-    raw?.dept_class ||
-    raw?.departmentClass ||
-    raw?.deptName ||
-    raw?.departmentName ||
-    raw?.department_id
-
-  if (looksLikeDepartment) return ''
-  return String(raw?.name || '').trim()
-}
-
-const normalizeDivision = (assignment, index = 0) => {
-  const className = assignment?.class || assignment?.dept_class || assignment?.departmentClass || ''
-  const name = assignment?.name || assignment?.companyName || assignment?.company || assignment?.deptName || assignment?.departmentName || ''
-  const jobLevel = assignment?.jobLevel || assignment?.job_level_name || assignment?.selectedJobLevel || ''
-  const jobLevelRank = assignment?.jobLevelRank || assignment?.job_level_rank || null
-  const label = assignment?.label || (className && name ? `${name} - ${className}` : (name || className || '-'))
+const normalizeDepartmentAccess = (department, fallbackCompany = '', fallbackJobLevel = '', fallbackJobLevelRank = null, index = 0) => {
+  const companyName = getCompanyNameFromDepartment(department, fallbackCompany)
+  const className = String(
+    department?.class ||
+    department?.dept_class ||
+    department?.departmentClass ||
+    department?.name ||
+    '',
+  ).trim()
+  const jobLevel = department?.jobLevel || department?.job_level_name || fallbackJobLevel || ''
+  const jobLevelRank = department?.jobLevelRank ?? department?.job_level_rank ?? fallbackJobLevelRank ?? null
+  const label = department?.label || (className && companyName ? `${companyName} - ${className}` : (companyName || className || '-'))
 
   return {
-    ...assignment,
-    originalIndex: assignment?.originalIndex ?? assignment?.id ?? index,
+    ...department,
+    originalIndex: department?.originalIndex ?? department?.id ?? index,
     class: className,
-    name,
+    name: companyName,
     jobLevel,
     jobLevelRank,
     label,
@@ -43,29 +38,21 @@ const normalizeDivision = (assignment, index = 0) => {
 const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
   const { includeAllCompanies = false } = options
   const selectedCompany = String(userInfo?.selectedCompany || '').trim()
-  const assignmentOptions = Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []
-  const departmentOptions = (Array.isArray(userInfo?.departments) ? userInfo.departments : []).map((department) => ({
-    ...department,
-    name: department?.companyName || department?.company || selectedCompany,
-    class: department?.class || department?.dept_class || department?.name || '',
-  }))
-  const assignments = [...assignmentOptions, ...departmentOptions]
+  const fallbackJobLevel = userInfo?.selectedJobLevel || ''
+  const fallbackJobLevelRank = userInfo?.jobLevelRank || null
+  const departments = Array.isArray(userInfo?.departments) ? userInfo.departments : []
 
-  const filteredAssignments = selectedCompany && !includeAllCompanies
-    ? assignments.filter((assignment) => String(assignment?.name || '').trim() === selectedCompany)
-    : assignments
+  const filteredDepartments = selectedCompany && !includeAllCompanies
+    ? departments.filter((department) => getCompanyNameFromDepartment(department, selectedCompany) === selectedCompany)
+    : departments
 
-  const divisions = filteredAssignments.flatMap((assignment, index) => {
-    const classes = Array.isArray(assignment?.classes) && assignment.classes.length > 0
-      ? assignment.classes
-      : [assignment?.class || assignment?.dept_class || assignment?.departmentClass].filter(Boolean)
-
-    return classes.map((className, classIndex) => normalizeDivision({
-      ...assignment,
-      class: className,
-      originalIndex: assignment?.id ?? index + classIndex,
-    }, index + classIndex))
-  })
+  const divisions = filteredDepartments.map((department, index) => normalizeDepartmentAccess(
+    department,
+    selectedCompany,
+    fallbackJobLevel,
+    fallbackJobLevelRank,
+    index,
+  ))
 
   const optionMap = new Map(divisions.map((division) => [`${division.name}::${division.class}`, division]))
 
@@ -73,41 +60,22 @@ const getDivisionOptionsFromUserInfo = (userInfo, options = {}) => {
 }
 
 const getCompanyOptionsFromUserInfo = (userInfo) => {
-  const assignments = Array.isArray(userInfo?.allAssignments) ? userInfo.allAssignments : []
-  const companies = Array.isArray(userInfo?.companies) ? userInfo.companies : []
   const departments = Array.isArray(userInfo?.departments) ? userInfo.departments : []
   const optionMap = new Map()
 
-  const addOption = (raw) => {
-    if (typeof raw === 'string') {
-      const name = raw.trim()
-      if (!name || optionMap.has(name)) return
-
-      optionMap.set(name, {
-        id: '',
-        code: '',
-        name,
-        isPrimary: 0,
-      })
-      return
-    }
-
-    const name = String(
-      getCompanyNameFromOption(raw),
-    ).trim()
+  const addOption = (department) => {
+    const name = getCompanyNameFromDepartment(department, userInfo?.selectedCompany)
 
     if (!name || optionMap.has(name)) return
 
     optionMap.set(name, {
-      id: raw?.companyId || raw?.id || '',
-      code: raw?.companyCode || raw?.code || '',
+      id: department?.companyId || department?.id || '',
+      code: department?.companyCode || department?.code || '',
       name,
-      isPrimary: raw?.is_primary ?? raw?.isPrimary ?? 0,
+      isPrimary: department?.is_primary ?? department?.isPrimary ?? 0,
     })
   }
 
-  companies.forEach(addOption)
-  assignments.forEach(addOption)
   departments.forEach(addOption)
 
   if (optionMap.size === 0 && userInfo?.selectedCompany) {
@@ -157,20 +125,21 @@ export default function SelectDivisionPage({
   const navigate = useNavigate()
   const { user: sessionUser, setUser } = useUser()
   const activeUser = userProp || sessionUser || null
+  const needsUserInfoFetch = forceFetchUserInfo || !activeUser || !Array.isArray(activeUser?.departments)
   const [fallbackUser, setFallbackUser] = useState(null)
-  const [loading, setLoading] = useState(forceFetchUserInfo || !activeUser)
+  const [loading, setLoading] = useState(needsUserInfoFetch)
   const [hoveredIdx, setHoveredIdx] = useState(null)
   const [selectedCompany, setSelectedCompany] = useState('')
   const [selectedDivision, setSelectedDivision] = useState('')
   const [selectedJobLevel, setSelectedJobLevel] = useState('')
   const [submitError, setSubmitError] = useState('')
-  const resolvedUserInfoEndpoint = userInfoEndpoint || (includeAllCompanies ? '/api/data/select-company' : '/api/data/select-division')
+  const resolvedUserInfoEndpoint = userInfoEndpoint || '/api/user/info'
   const isDebugAccessEnabled =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('debug-access') === '1'
 
   useEffect(() => {
-    if (!isOpen || (activeUser && !forceFetchUserInfo)) return undefined
+    if (!isOpen || !needsUserInfoFetch) return undefined
 
     let cancelled = false
 
@@ -195,7 +164,7 @@ export default function SelectDivisionPage({
           })
         }
         setFallbackUser(userInfo)
-        setUser(userInfo)
+        setUser(userInfo, { replaceSelection: true })
       })
       .catch((error) => {
         if (cancelled) return
@@ -210,7 +179,7 @@ export default function SelectDivisionPage({
     return () => {
       cancelled = true
     }
-  }, [activeUser, forceFetchUserInfo, isDebugAccessEnabled, isOpen, resolvedUserInfoEndpoint, setUser])
+  }, [isDebugAccessEnabled, isOpen, needsUserInfoFetch, resolvedUserInfoEndpoint, setUser])
 
   const userInfo = fallbackUser || activeUser
   const companyOptions = useMemo(() => getCompanyOptionsFromUserInfo(userInfo), [userInfo])
