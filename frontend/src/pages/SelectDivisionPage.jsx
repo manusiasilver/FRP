@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { usePageLoadingDialog } from '../contexts/PageLoadingContext'
 import { useUser } from '../contexts/UserContext'
 import DialogChangeAccess from '../components/Dialog/DialogChangeAccess.jsx'
+
+const ACCESS_ROUTE_PATHS = new Set(['/select-company', '/select-division'])
 
 const getCompanyNameFromDepartment = (department, fallbackCompany = '') => String(
   department?.companyName ||
@@ -116,18 +119,19 @@ const getAccessOptionLabel = (division) => {
 export default function SelectDivisionPage({
   isOpen = true,
   onClose,
-  onSuccess,
   user: userProp = null,
   includeAllCompanies = false,
   userInfoEndpoint,
   forceFetchUserInfo = false,
 } = {}) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { user: sessionUser, setUser } = useUser()
   const activeUser = userProp || sessionUser || null
   const needsUserInfoFetch = forceFetchUserInfo || !activeUser || !Array.isArray(activeUser?.departments)
   const [fallbackUser, setFallbackUser] = useState(null)
   const [loading, setLoading] = useState(needsUserInfoFetch)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [hoveredIdx, setHoveredIdx] = useState(null)
   const [selectedCompany, setSelectedCompany] = useState('')
   const [selectedDivision, setSelectedDivision] = useState('')
@@ -137,6 +141,12 @@ export default function SelectDivisionPage({
   const isDebugAccessEnabled =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('debug-access') === '1'
+
+  usePageLoadingDialog(isRefreshing, {
+    title: 'Memperbarui Akses',
+    message: 'Sistem sedang memuat ulang halaman dengan akses terbaru Anda.',
+    statusLabel: 'Memperbarui akses',
+  })
 
   useEffect(() => {
     if (!isOpen || !needsUserInfoFetch) return undefined
@@ -328,12 +338,17 @@ export default function SelectDivisionPage({
         }, { replaceSelection: true })
       }
 
-      if (typeof onSuccess === 'function') {
-        onSuccess()
-        return
-      }
+      setIsRefreshing(true)
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (ACCESS_ROUTE_PATHS.has(pathname)) {
+            window.location.assign('/')
+            return
+          }
 
-      window.location.href = '/'
+          window.location.reload()
+        })
+      })
     } catch (error) {
       console.error('[SelectDivisionPage] Failed to save division', error)
       setSubmitError(error.message || 'Gagal menyimpan divisi.')

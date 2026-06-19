@@ -245,7 +245,6 @@ export default function DashboardLayout() {
         user={u}
         includeAllCompanies
         onClose={() => setIsAccessDialogOpen(false)}
-        onSuccess={() => setIsAccessDialogOpen(false)}
       />
     </div>
   )
