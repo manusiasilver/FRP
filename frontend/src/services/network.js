@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getToken } from '../utils/auth'
+import { getAuthUser, getToken } from '../utils/auth'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const API_PATH_PREFIXES = ['/api/', '/logout', '/generate-pdf', '/preview', '/pdfs']
@@ -23,6 +23,15 @@ export function configureNetworkClient() {
 
   const nativeFetch = window.fetch.bind(window)
 
+  const getScopeHeaders = () => {
+    const user = getAuthUser()
+
+    return {
+      ...(user?.selectedCompany ? { 'X-Selected-Company': user.selectedCompany } : {}),
+      ...(user?.selectedDivision ? { 'X-Selected-Division': user.selectedDivision } : {}),
+    }
+  }
+
   window.fetch = (input, init = {}) => {
     const nextInput = resolveApiUrl(input)
     const token = getToken()
@@ -32,6 +41,7 @@ export function configureNetworkClient() {
       ...init,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getScopeHeaders(),
         ...(init.headers || {}),
       },
     }
@@ -44,5 +54,18 @@ export function configureNetworkClient() {
   if (API_BASE_URL) {
     axios.defaults.baseURL = API_BASE_URL
   }
+
+  axios.interceptors.request.use((config) => {
+    const token = getToken()
+    const scopeHeaders = getScopeHeaders()
+
+    config.headers = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...scopeHeaders,
+      ...(config.headers || {}),
+    }
+
+    return config
+  })
 }
 

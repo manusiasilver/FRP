@@ -38,6 +38,7 @@ const pdfPath      = path.join(__dirname, 'generated-pdfs');
 const { frpDb, centralDb } = require('./db');
 const { LOGIN_SQL } = require('./src/config/constants');
 const { userFromLoginRows } = require('./src/services/dbService');
+const { findAssignment, findCompany, applySelectedAssignment } = require('./src/utils/accessScope');
 const jwt = require('jsonwebtoken');
 
 function isJwtLike(token) {
@@ -195,6 +196,46 @@ app.use(async (req, res, next) => {
 
         return res.redirect('/');
     }
+});
+
+app.use((req, res, next) => {
+    if (!req.session?.user) {
+        return next();
+    }
+
+    const requestedCompany = req.headers['x-selected-company'];
+    const requestedDivision = req.headers['x-selected-division'];
+
+    if (!requestedCompany && !requestedDivision) {
+        return next();
+    }
+
+    const assignment = findAssignment(req.session.user, requestedCompany, requestedDivision);
+    const company = findCompany(req.session.user, requestedCompany);
+
+    if (!assignment && !company) {
+        return next();
+    }
+
+    const previousCompany = req.session.user.selectedCompany || '';
+    const previousDivision = req.session.user.selectedDivision || '';
+
+    applySelectedAssignment(req.session.user, assignment, requestedCompany, requestedDivision);
+
+    if (
+        previousCompany !== req.session.user.selectedCompany ||
+        previousDivision !== req.session.user.selectedDivision
+    ) {
+        console.log('[Auth Scope Sync] Applied scope from request headers:', {
+            path: req.path,
+            previousCompany,
+            previousDivision,
+            nextCompany: req.session.user.selectedCompany,
+            nextDivision: req.session.user.selectedDivision,
+        });
+    }
+
+    next();
 });
 
 app.get('/api/dev/auth-user', (req, res) => {

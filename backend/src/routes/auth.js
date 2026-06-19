@@ -4,87 +4,15 @@ const { centralDb } = require('../../db');
 const { checkAuth } = require('../middleware/auth');
 const { userFromLoginRows } = require('../services/dbService');
 const { LOGIN_SQL } = require('../config/constants');
+const {
+    findAssignment,
+    findCompany,
+    getUserCompanies,
+    applySelectedAssignment,
+    getUserAccessOptions,
+} = require('../utils/accessScope');
 
 const router = express.Router();
-
-function sameText(a, b) {
-    return String(a || '').trim() === String(b || '').trim();
-}
-
-function getAssignmentClasses(assignment) {
-    if (Array.isArray(assignment?.classes) && assignment.classes.length > 0) {
-        return assignment.classes;
-    }
-
-    return [
-        assignment?.class,
-        assignment?.dept_class,
-        assignment?.departmentClass,
-    ].filter(Boolean);
-}
-
-function getUserCompanies(user) {
-    const companyMap = new Map();
-
-    const addCompany = (raw) => {
-        if (typeof raw === 'string') {
-            const name = raw.trim();
-            if (!name || companyMap.has(name)) return;
-            companyMap.set(name, { id: '', code: '', name, is_primary: 0 });
-            return;
-        }
-
-        const name = String(raw?.name || raw?.companyName || raw?.company || '').trim();
-        if (!name || companyMap.has(name)) return;
-
-        companyMap.set(name, {
-            id: raw?.companyId || raw?.id || '',
-            code: raw?.companyCode || raw?.code || '',
-            name,
-            is_primary: raw?.is_primary ?? raw?.isPrimary ?? 0,
-        });
-    };
-
-    if (Array.isArray(user.companies)) {
-        user.companies.forEach(addCompany);
-    }
-
-    if (Array.isArray(user.allAssignments)) {
-        user.allAssignments.forEach(addCompany);
-    }
-
-    return [...companyMap.values()];
-}
-
-function findCompany(user, requestedCompany) {
-    const company = String(requestedCompany || '').trim();
-    return getUserCompanies(user).find(item => sameText(item.name, company));
-}
-
-function applySelectedAssignment(req, assignment, requestedCompany, requestedDivision) {
-    const selectedCompany = findCompany(req.session.user, requestedCompany);
-    const nextCompany = assignment?.name || assignment?.companyName || selectedCompany?.name || requestedCompany || req.session.user.selectedCompany || '';
-
-    req.session.user.selectedCompany = nextCompany;
-    req.session.user.selectedCompanyId = assignment?.companyId || assignment?.id || selectedCompany?.id || req.session.user.selectedCompanyId || '';
-    req.session.user.selectedCompanyCode = assignment?.companyCode || assignment?.code || selectedCompany?.code || req.session.user.selectedCompanyCode || '';
-    req.session.user.selectedDivision = requestedDivision || assignment?.class || assignment?.dept_class || '';
-    req.session.user.selectedJobLevel = assignment?.jobLevel || assignment?.job_level_name || req.session.user.selectedJobLevel || '';
-    req.session.user.jobLevelRank = assignment?.jobLevelRank || assignment?.job_level_rank || req.session.user.jobLevelRank || null;
-}
-
-function findAssignment(user, requestedCompany, requestedDivision) {
-    const company = String(requestedCompany || '').trim();
-    const division = String(requestedDivision || '').trim();
-
-    return (user.allAssignments || []).find((assignment) => {
-        const assignmentCompany = assignment.name || assignment.companyName || '';
-        const companyMatches = !company || sameText(assignmentCompany, company);
-        const divisionMatches = !division || getAssignmentClasses(assignment).some((item) => sameText(item, division));
-
-        return companyMatches && divisionMatches;
-    });
-}
 
 function respondAfterSessionSave(req, res, onSuccess) {
     req.session.save((error) => {
@@ -119,22 +47,41 @@ function saveSelectedAuthScope(req, res, next) {
     })
     
     const assignment = findAssignment(user, requestedCompany, requestedDivision);
+    const companyMatch = findCompany(user, requestedCompany);
 
     console.log('[Auth Backend] Assignment lookup result:', {
         found: !!assignment,
-        assignment: assignment ? { id: assignment.id, company: assignment.company, division: assignment.division } : null,
-        hasCompany: !!findCompany(user, requestedCompany),
+        assignment: assignment ? { id: assignment.id, company: assignment.name, division: assignment.class } : null,
+        hasCompany: !!companyMatch,
     })
 
-    if (assignment || findCompany(user, requestedCompany)) {
-        applySelectedAssignment(req, assignment, requestedCompany, requestedDivision);
+    if (assignment || companyMatch) {
+        applySelectedAssignment(req.session.user, assignment, requestedCompany, requestedDivision);
         console.log('[Auth Backend] Applied selected assignment, new session:', {
             selectedCompany: req.session.user?.selectedCompany,
             selectedDivision: req.session.user?.selectedDivision,
             selectedJobLevel: req.session.user?.selectedJobLevel,
         })
     } else {
-        console.warn('[Auth Backend] No assignment or company found for requested scope')
+        console.warn('[Auth Backend] No assignment or company found for requested scope', {
+            requestedCompany,
+            requestedDivision,
+            availableAccess: getUserAccessOptions(user).map((item) => ({
+                company: item.name,
+                division: item.class,
+            })),
+        })
+
+        return res.status(400).json({
+            success: false,
+            error: 'Requested company or division is not available for this user session',
+            requestedCompany,
+            requestedDivision,
+            availableAccess: getUserAccessOptions(user).map((item) => ({
+                company: item.name,
+                division: item.class,
+            })),
+        });
     }
 
     respondAfterSessionSave(req, res, () => {
@@ -223,7 +170,7 @@ router.post('/select-division', checkAuth, (req, res) => {
     const requestedCompany = req.body.company || user.selectedCompany;
     const assignment = findAssignment(user, requestedCompany, req.body.division);
     if (assignment || findCompany(user, requestedCompany)) {
-        applySelectedAssignment(req, assignment, requestedCompany, req.body.division);
+        applySelectedAssignment(req.session.user, assignment, requestedCompany, req.body.division);
     }
     respondAfterSessionSave(req, res, () => res.redirect('/'));
 });
