@@ -32,6 +32,14 @@ const formatDecimalInput = v => {
 }
 
 const normalizeCompany = v => String(v || '').trim().toUpperCase()
+const getBudgetRemainingValue = budget => {
+  if (!budget) return 0
+  if (budget.budget_remaining !== undefined) return Number(budget.budget_remaining || 0)
+  if (budget.sisa_budget !== undefined) return Number(budget.sisa_budget || 0)
+  if (budget.sisaBudget !== undefined) return Number(budget.sisaBudget || 0)
+  if (budget.remainingAmount !== undefined) return Number(budget.remainingAmount || 0)
+  return 0
+}
 
 const getDisplayName = (user) => {
   return user?.name || user?.fullName || user?.username || user?.displayName || ''
@@ -537,8 +545,7 @@ export default function NewFRP() {
 
   const getBudgetAmount = budgetId => {
     const b = (frpData?.budgets || []).find(x => x.id === budgetId)
-    if (!b) return 0
-    return b.budget_remaining !== undefined ? b.budget_remaining : (b.sisa_budget !== undefined ? b.sisa_budget : (b.sisaBudget !== undefined ? b.sisaBudget : (b.remainingAmount !== undefined ? b.remainingAmount : 0)))
+    return getBudgetRemainingValue(b)
   }
 
   const totalAmount = useMemo(
@@ -639,41 +646,47 @@ export default function NewFRP() {
         oldItems = frpData.editData.items
       }
 
-      // Validasi limit budget
-      for (const item of values.items) {
-        if (item.budgetId) {
-          const dbBudget = latestBudgets.find(b => b.id === item.budgetId)
-          if (!dbBudget) {
-            setSubmitError(`Budget ID ${item.budgetId} tidak ditemukan di database.`)
-            setSubmitting(false)
-            return
-          }
+      const requestedByBudget = values.items.reduce((acc, item) => {
+        if (!item.budgetId) return acc
+        const current = acc[item.budgetId] || { totalAmount: 0, maxUnitPrice: 0 }
+        const rowAmount = calculateRowAmount(item)
+        const unitPriceIdr = normalizeNumber(item.hargaSatuan) * (normalizeNumber(values.kurs) || 1)
+        acc[item.budgetId] = {
+          totalAmount: current.totalAmount + rowAmount,
+          maxUnitPrice: Math.max(current.maxUnitPrice, unitPriceIdr),
+        }
+        return acc
+      }, {})
 
-          const dbRemaining = dbBudget.budget_remaining !== undefined ? dbBudget.budget_remaining : (dbBudget.remainingAmount || 0)
-          
-          let revertedAmount = 0
-          if (isRevision) {
-            const matchedOld = oldItems.filter(oi => oi.budgetId === item.budgetId)
-            revertedAmount = matchedOld.reduce((sum, oi) => sum + (parseFloat(oi.amount) || 0), 0)
-          }
+      // Validasi limit budget per budgetId agar multi-item dengan budget yang sama ikut terhitung
+      for (const [budgetId, requested] of Object.entries(requestedByBudget)) {
+        const dbBudget = latestBudgets.find(b => b.id === budgetId)
+        if (!dbBudget) {
+          setSubmitError(`Budget ID ${budgetId} tidak ditemukan di database.`)
+          setSubmitting(false)
+          return
+        }
 
-          const availableBudget = dbRemaining + revertedAmount
+        const dbRemaining = getBudgetRemainingValue(dbBudget)
 
-          // Cek Harga Satuan (dalam IDR)
-          const unitPriceIdr = normalizeNumber(item.hargaSatuan) * (normalizeNumber(values.kurs) || 1)
-          if (unitPriceIdr > availableBudget) {
-            setSubmitError(`Harga Satuan untuk budget ${item.budgetId} (Rp ${formatCurrency(unitPriceIdr)}) melebihi batas sisa budget di database (Rp ${formatCurrency(availableBudget)}).`)
-            setSubmitting(false)
-            return
-          }
+        let revertedAmount = 0
+        if (isRevision) {
+          const matchedOld = oldItems.filter(oi => oi.budgetId === budgetId)
+          revertedAmount = matchedOld.reduce((sum, oi) => sum + (parseFloat(oi.amount) || 0), 0)
+        }
 
-          // Cek Total Amount (dalam IDR)
-          const reqAmount = calculateRowAmount(item)
-          if (reqAmount > availableBudget) {
-            setSubmitError(`Total Amount pada budget ${item.budgetId} (Rp ${formatCurrency(reqAmount)}) melebihi batas sisa budget di database (Rp ${formatCurrency(availableBudget)}).`)
-            setSubmitting(false)
-            return
-          }
+        const availableBudget = dbRemaining + revertedAmount
+
+        if (requested.maxUnitPrice > availableBudget) {
+          setSubmitError(`Harga Satuan untuk budget ${budgetId} (Rp ${formatCurrency(requested.maxUnitPrice)}) melebihi batas sisa budget di database (Rp ${formatCurrency(availableBudget)}).`)
+          setSubmitting(false)
+          return
+        }
+
+        if (requested.totalAmount > availableBudget) {
+          setSubmitError(`Total Amount gabungan pada budget ${budgetId} (Rp ${formatCurrency(requested.totalAmount)}) melebihi batas sisa budget di database (Rp ${formatCurrency(availableBudget)}).`)
+          setSubmitting(false)
+          return
         }
       }
 

@@ -36,23 +36,50 @@ export default function DataTableItemsFrp({
     return (budgets || []).find(b => b.id === budgetId)
   }
 
-  const getSisaBudget = budgetId => {
+  const getBaseBudgetRemaining = budgetId => {
     const b = getBudgetObj(budgetId)
     if (!b) return 0
     return b.budget_remaining !== undefined ? b.budget_remaining : (b.sisa_budget !== undefined ? b.sisa_budget : (b.sisaBudget !== undefined ? b.sisaBudget : (b.remainingAmount !== undefined ? b.remainingAmount : 0)))
   }
 
+  const getItemSubtotal = item => {
+    return calculateRowAmount
+      ? calculateRowAmount(item)
+      : (normalizeNumber(item.qty) * normalizeNumber(item.hargaSatuan) * (normalizeNumber(kurs) || 1))
+  }
+
+  const requestedBudgetTotals = items.reduce((acc, item) => {
+    if (!item.budgetId) return acc
+    acc[item.budgetId] = (acc[item.budgetId] || 0) + getItemSubtotal(item)
+    return acc
+  }, {})
+
+  const getRequestedBudgetTotal = budgetId => requestedBudgetTotals[budgetId] || 0
+
+  const getAvailableBudgetForItem = item => {
+    if (!item?.budgetId) return null
+    const currentSubtotal = getItemSubtotal(item)
+    return getBaseBudgetRemaining(item.budgetId) - (getRequestedBudgetTotal(item.budgetId) - currentSubtotal)
+  }
+
+  const getPreviewRemaining = item => {
+    if (!item?.budgetId) return null
+    return getBaseBudgetRemaining(item.budgetId) - getRequestedBudgetTotal(item.budgetId)
+  }
+
   const isHargaSatuanExceeded = (item) => {
     if (!item.budgetId || !item.hargaSatuan) return false
-    const budgetRemaining = getSisaBudget(item.budgetId)
+    const budgetRemaining = getAvailableBudgetForItem(item)
+    if (budgetRemaining === null) return false
     const unitPriceIdr = normalizeNumber(item.hargaSatuan) * (normalizeNumber(kurs) || 1)
     return unitPriceIdr > budgetRemaining
   }
 
   const isTotalAmountExceeded = (item) => {
     if (!item.budgetId || !item.hargaSatuan) return false
-    const budgetRemaining = getSisaBudget(item.budgetId)
-    const totalAmountIdr = calculateRowAmount ? calculateRowAmount(item) : (normalizeNumber(item.qty) * normalizeNumber(item.hargaSatuan) * (normalizeNumber(kurs) || 1))
+    const budgetRemaining = getAvailableBudgetForItem(item)
+    if (budgetRemaining === null) return false
+    const totalAmountIdr = getItemSubtotal(item)
     return totalAmountIdr > budgetRemaining
   }
 
@@ -61,9 +88,8 @@ export default function DataTableItemsFrp({
       {isMobile ? (
         <div>
           {items.map((item, idx) => {
-            const remaining = item.budgetId ? getSisaBudget(item.budgetId) : null
-            const subtotal = calculateRowAmount ? calculateRowAmount(item) : (normalizeNumber(item.qty) * normalizeNumber(item.hargaSatuan) * (normalizeNumber(kurs) || 1))
-            const previewRemaining = remaining !== null ? remaining - subtotal : null
+            const subtotal = getItemSubtotal(item)
+            const previewRemaining = getPreviewRemaining(item)
 
             return (
             <div key={idx} className="frp-item-card">
@@ -149,9 +175,8 @@ export default function DataTableItemsFrp({
             </thead>
             <tbody>
               {items.map((item, idx) => {
-                const remaining = item.budgetId ? getSisaBudget(item.budgetId) : null
-                const subtotal = calculateRowAmount ? calculateRowAmount(item) : (normalizeNumber(item.qty) * normalizeNumber(item.hargaSatuan) * (normalizeNumber(kurs) || 1))
-                const previewRemaining = remaining !== null ? remaining - subtotal : null
+                const subtotal = getItemSubtotal(item)
+                const previewRemaining = getPreviewRemaining(item)
 
                 return (
                 <tr key={idx}>

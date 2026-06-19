@@ -47,14 +47,28 @@ export default function DataTableItemsRp({
   totalAmount,
   mobileDropdownStyle
 }) {
+  const getItemSubtotal = item => normalizeNumber(item.qty) * normalizeNumber(item.estimatedValue)
+
+  const requestedBudgetTotals = items.reduce((acc, item) => {
+    if (!item.budgetId) return acc
+    acc[item.budgetId] = (acc[item.budgetId] || 0) + getItemSubtotal(item)
+    return acc
+  }, {})
+
+  const getPreviewRemaining = item => {
+    if (!item?.budgetId) return null
+    const remaining = getBudgetRemaining(item.budgetId)
+    if (remaining === null || remaining === undefined) return null
+    return remaining - (requestedBudgetTotals[item.budgetId] || 0)
+  }
+
   return (
     <div>
       {isMobile ? (
         <div style={{ display: 'grid', gap: '12px' }}>
           {items.map((item, idx) => {
-            const remaining = getBudgetRemaining(item.budgetId)
-            const subtotal = normalizeNumber(item.qty) * normalizeNumber(item.estimatedValue)
-            const previewRemaining = remaining !== null ? remaining - subtotal : null
+            const subtotal = getItemSubtotal(item)
+            const previewRemaining = getPreviewRemaining(item)
             return (
               <div key={idx} style={S.itemCard}>
                 <div style={S.itemCardHeader}>
@@ -68,16 +82,16 @@ export default function DataTableItemsRp({
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.85rem' }}>
                   <div style={{ ...S.formGroup, gridColumn: '1 / -1' }}>
-                    <label style={S.label}>Budget</label>
-                    <SearchableSelect name={`items[${idx}][budgetId]`} value={item.budgetId} onChange={v => updateItem(idx, 'budgetId', v)} options={budgetSelectOpts} placeholder="Pilih Budget" style={S.select} dropdownStyle={mobileDropdownStyle} menuPosition="fixed" />
-                  </div>
-                  <div style={{ ...S.formGroup, gridColumn: '1 / -1' }}>
                     <label style={S.label}>Memo</label>
                     <input name={`items[${idx}][memo]`} style={S.input} value={item.memo} onChange={e => updateItem(idx, 'memo', e.target.value)} placeholder="Deskripsi item..." />
                   </div>
                   <div style={{ ...S.formGroup, gridColumn: '1 / -1' }}>
                     <label style={S.label}>Purchase Link</label>
                     <input name={`items[${idx}][linkPembelian]`} style={S.input} value={item.linkPembelian} onChange={e => updateItem(idx, 'linkPembelian', e.target.value)} placeholder="https://..." />
+                  </div>
+                  <div style={{ ...S.formGroup, gridColumn: '1 / -1' }}>
+                    <label style={S.label}>Budget</label>
+                    <SearchableSelect name={`items[${idx}][budgetId]`} value={item.budgetId} onChange={v => updateItem(idx, 'budgetId', v)} options={budgetSelectOpts} placeholder="Pilih Budget" style={S.select} dropdownStyle={mobileDropdownStyle} menuPosition="fixed" />
                   </div>
                   <div style={S.formGroup}>
                     <label style={S.label}>Qty</label>
@@ -107,35 +121,22 @@ export default function DataTableItemsRp({
           <table style={S.table}>
             <thead>
               <tr>
-                <th style={{ ...S.th, width: '22%', borderLeft: '1px solid #e2e8f0', borderTopLeftRadius: '8px' }}>Item</th>
-                <th style={{ ...S.th, width: '18%' }}>Memo</th>
+                <th style={{ ...S.th, width: '20%', borderLeft: '1px solid #e2e8f0', borderTopLeftRadius: '8px' }}>Memo</th>
                 <th style={{ ...S.th, width: '22%' }}>Purchase Link</th>
+                <th style={{ ...S.th, width: '20%' }}>Budget</th>
                 <th style={{ ...S.th, width: '8%', textAlign: 'center' }}>Qty</th>
                 <th style={{ ...S.th, width: '13%', textAlign: 'right' }}>Budget Remaining</th>
                 <th style={{ ...S.th, width: '13%', textAlign: 'right' }}>Unit Price (IDR)</th>
                 <th style={{ ...S.th, width: '13%', textAlign: 'right' }}>Total (IDR)</th>
-                <th style={{ ...S.th, width: '3%', borderTopRightRadius: '8px' }} />
+                <th style={{ ...S.th, width: '4%', borderTopRightRadius: '8px' }} />
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => {
-                const remaining = getBudgetRemaining(item.budgetId)
-                const subtotal = normalizeNumber(item.qty) * normalizeNumber(item.estimatedValue)
-                const previewRemaining = remaining !== null ? remaining - subtotal : null
+                const subtotal = getItemSubtotal(item)
+                const previewRemaining = getPreviewRemaining(item)
                 return (
                   <tr key={idx}>
-                    <td style={S.td}>
-                      <SearchableSelect
-                        name={`items[${idx}][budgetId]`}
-                        value={item.budgetId}
-                        onChange={v => updateItem(idx, 'budgetId', v)}
-                        options={budgetSelectOpts}
-                        placeholder="Pilih Budget"
-                        className="frp-td-select"
-                        style={{ minHeight: '34px', padding: '6px 10px', fontSize: '0.85rem' }}
-                        menuPosition="fixed"
-                      />
-                    </td>
                     <td style={S.td}>
                       <input
                         name={`items[${idx}][memo]`}
@@ -152,6 +153,18 @@ export default function DataTableItemsRp({
                         value={item.linkPembelian}
                         onChange={e => updateItem(idx, 'linkPembelian', e.target.value)}
                         placeholder="https://..."
+                      />
+                    </td>
+                    <td style={{ ...S.td, textAlign: 'center' }}>
+                      <SearchableSelect
+                        name={`items[${idx}][budgetId]`}
+                        value={item.budgetId}
+                        onChange={v => updateItem(idx, 'budgetId', v)}
+                        options={budgetSelectOpts}
+                        placeholder="Pilih Budget"
+                        className="frp-td-select"
+                        style={{ minHeight: '34px', padding: '6px 10px', fontSize: '0.85rem' }}
+                        menuPosition="fixed"
                       />
                     </td>
                     <td style={{ ...S.td, textAlign: 'center' }}>
