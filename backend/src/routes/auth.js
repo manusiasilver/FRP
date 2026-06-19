@@ -106,13 +106,43 @@ function saveSelectedAuthScope(req, res, next) {
     const user = req.session.user;
     const requestedCompany = req.body.company || user.selectedCompany;
     const requestedDivision = req.body.division;
+    
+    console.log('[Auth Backend] saveSelectedAuthScope called:', {
+        userId: user?.id,
+        requestedCompany,
+        requestedDivision,
+        currentSession: {
+            selectedCompany: user?.selectedCompany,
+            selectedDivision: user?.selectedDivision,
+            selectedJobLevel: user?.selectedJobLevel,
+        },
+    })
+    
     const assignment = findAssignment(user, requestedCompany, requestedDivision);
+
+    console.log('[Auth Backend] Assignment lookup result:', {
+        found: !!assignment,
+        assignment: assignment ? { id: assignment.id, company: assignment.company, division: assignment.division } : null,
+        hasCompany: !!findCompany(user, requestedCompany),
+    })
 
     if (assignment || findCompany(user, requestedCompany)) {
         applySelectedAssignment(req, assignment, requestedCompany, requestedDivision);
+        console.log('[Auth Backend] Applied selected assignment, new session:', {
+            selectedCompany: req.session.user?.selectedCompany,
+            selectedDivision: req.session.user?.selectedDivision,
+            selectedJobLevel: req.session.user?.selectedJobLevel,
+        })
+    } else {
+        console.warn('[Auth Backend] No assignment or company found for requested scope')
     }
 
     respondAfterSessionSave(req, res, () => {
+        console.log('[Auth Backend] Responding with updated user:', {
+            userId: req.session.user?.id,
+            selectedCompany: req.session.user?.selectedCompany,
+            selectedDivision: req.session.user?.selectedDivision,
+        })
         res.json({
             success: true,
             user: req.session.user,
@@ -228,9 +258,17 @@ router.post('/api/auth/login', async (req, res) => {
 });
 
 router.get('/api/auth/me', checkAuth, (req, res) => {
+    const user = req.session.user;
+    console.log('[Auth Backend] GET /api/auth/me called:', {
+        userId: user?.id,
+        selectedCompany: user?.selectedCompany,
+        selectedDivision: user?.selectedDivision,
+        selectedJobLevel: user?.selectedJobLevel,
+    })
+    
     res.json({
         success: true,
-        user: req.session.user,
+        user: user,
     });
 });
 

@@ -245,6 +245,13 @@ export default function SelectDivisionPage({
   useEffect(() => {
     if (!isOpen || !userInfo) return
 
+    console.log('[SelectDivisionPage] Initializing division selector:', {
+      userSelectedCompany: userInfo.selectedCompany,
+      userSelectedDivision: userInfo.selectedDivision,
+      companyOptionsCount: companyOptions.length,
+      divisionsCount: divisions.length,
+    })
+
     const initialCompany =
       userInfo.selectedCompany ||
       companyOptions[0]?.name ||
@@ -264,11 +271,19 @@ export default function SelectDivisionPage({
       divisions.find((division) => division.class === initialDivision || division.name === initialDivision) ||
       divisions[0]
 
+    console.log('[SelectDivisionPage] Initial values:', {
+      initialCompany,
+      initialDivision,
+      initialItem: initialItem ? { name: initialItem.name, class: initialItem.class, jobLevel: initialItem.jobLevel } : null,
+    })
+
     if (initialItem) {
+      console.log('[SelectDivisionPage] Setting from initialItem')
       setSelectedCompany(initialItem.name || userInfo.selectedCompany || '')
       setSelectedDivision(initialItem.class || '')
       setSelectedJobLevel(initialItem.jobLevel || '')
     } else if (initialCompany) {
+      console.log('[SelectDivisionPage] Setting company only')
       setSelectedCompany(initialCompany)
     }
 
@@ -278,31 +293,54 @@ export default function SelectDivisionPage({
   useEffect(() => {
     if (!isOpen || filteredDivisions.length === 0) return
 
+    console.log('[SelectDivisionPage] Syncing with filteredDivisions:', {
+      filteredDivisionsCount: filteredDivisions.length,
+      selectedDivision,
+      selectedCompany,
+      showCombinedAccessOptions,
+    })
+
     const selectedItem = filteredDivisions.find((division) => (
       division.class === selectedDivision &&
       (!showCombinedAccessOptions || division.name === selectedCompany)
     ))
     if (selectedItem) {
       if (selectedItem.jobLevel !== selectedJobLevel) {
+        console.log('[SelectDivisionPage] Updating jobLevel for selected item')
         setSelectedJobLevel(selectedItem.jobLevel || '')
       }
+      console.log('[SelectDivisionPage] Current division selection is still valid')
       return
     }
 
+    console.log('[SelectDivisionPage] Current division selection not found in filtered divisions, resetting')
     const nextDivision = filteredDivisions[0]
     if (showCombinedAccessOptions) {
+      console.log('[SelectDivisionPage] Updating company to first filtered division')
       setSelectedCompany(nextDivision.name || '')
     }
+    console.log('[SelectDivisionPage] Resetting division and jobLevel')
     setSelectedDivision(nextDivision.class || '')
     setSelectedJobLevel(nextDivision.jobLevel || '')
   }, [filteredDivisions, isOpen, selectedCompany, selectedDivision, selectedJobLevel, showCombinedAccessOptions])
 
   const handleSelect = async () => {
+    console.log('[SelectDivisionPage] handleSelect called')
+    console.log('[SelectDivisionPage] Current selection:', {
+      selectedCompany,
+      selectedDivision,
+      selectedJobLevel,
+      showCombinedAccessOptions,
+    })
+
     if (!selectedDivision) {
-      setSubmitError(showCombinedAccessOptions ? 'Pilih akses terlebih dahulu.' : 'Pilih divisi terlebih dahulu.')
+      const errorMsg = showCombinedAccessOptions ? 'Pilih akses terlebih dahulu.' : 'Pilih divisi terlebih dahulu.'
+      console.error('[SelectDivisionPage] No division selected:', errorMsg)
+      setSubmitError(errorMsg)
       return
     }
 
+    console.log('[SelectDivisionPage] Finding matching division item from filteredDivisions')
     const selectedItem =
       filteredDivisions.find((division) =>
         division.class === selectedDivision &&
@@ -321,7 +359,15 @@ export default function SelectDivisionPage({
       null
     const company = selectedItem?.name || selectedCompany || userInfo?.selectedCompany || ''
 
+    console.log('[SelectDivisionPage] Division change payload:', {
+      company,
+      division: selectedDivision,
+      jobLevel: selectedJobLevel,
+      selectedItem: selectedItem ? { id: selectedItem.id, name: selectedItem.name, class: selectedItem.class } : null,
+    })
+
     try {
+      console.log('[SelectDivisionPage] Sending POST /api/auth/me with division change')
       const response = await fetch('/api/auth/me', {
         method: 'POST',
         credentials: 'include',
@@ -330,16 +376,27 @@ export default function SelectDivisionPage({
         body: JSON.stringify({ company, division: selectedDivision }),
       })
 
+      console.log('[SelectDivisionPage] POST /api/auth/me response status:', response.status, response.ok)
+
       if (!response.ok) {
+        console.error('%c❌ GAGAL! POST /api/auth/me returned status %d', 'color: #dc2626; font-weight: bold; font-size: 14px;', response.status)
         throw new Error('Gagal menyimpan divisi.')
       }
 
+      console.log('[SelectDivisionPage] Parsing response JSON')
       const result = await response.json().catch(() => ({}))
+      console.log('[SelectDivisionPage] Response JSON received:', result)
       let nextUser = null
 
       if (result?.user) {
+        console.log('[SelectDivisionPage] Using user from response:', {
+          userId: result.user.id,
+          selectedCompany: result.user.selectedCompany,
+          selectedDivision: result.user.selectedDivision,
+        })
         nextUser = result.user
       } else if (userInfo) {
+        console.log('[SelectDivisionPage] Building nextUser from current userInfo')
         nextUser = {
           ...userInfo,
           selectedCompany: company,
@@ -348,14 +405,24 @@ export default function SelectDivisionPage({
           selectedDivision,
           selectedJobLevel,
         }
+        console.log('[SelectDivisionPage] Built nextUser:', {
+          selectedCompany: nextUser.selectedCompany,
+          selectedDivision: nextUser.selectedDivision,
+          selectedJobLevel: nextUser.selectedJobLevel,
+        })
       }
 
       if (nextUser) {
+        console.log('[SelectDivisionPage] Updating user state with setUser and setFallbackUser')
         setFallbackUser(nextUser)
         setUser(nextUser, { replaceSelection: true })
+        console.log('[SelectDivisionPage] User state updated')
+      } else {
+        console.warn('[SelectDivisionPage] No nextUser to update')
       }
 
       try {
+        console.log('[SelectDivisionPage] Refreshing user info from', resolvedUserInfoEndpoint)
         const refreshedResponse = await fetch(`${resolvedUserInfoEndpoint}${resolvedUserInfoEndpoint.includes('?') ? '&' : '?'}_ts=${Date.now()}`, {
           credentials: 'include',
           cache: 'no-store',
@@ -364,31 +431,83 @@ export default function SelectDivisionPage({
           },
         })
 
+        console.log('[SelectDivisionPage] Refresh response status:', refreshedResponse.status, refreshedResponse.ok)
+
         if (refreshedResponse.ok) {
           const refreshedPayload = await refreshedResponse.json().catch(() => null)
           const refreshedUser = refreshedPayload?.user || refreshedPayload || null
 
           if (refreshedUser) {
+            console.log('[SelectDivisionPage] Got refreshed user info:', {
+              userId: refreshedUser.id,
+              selectedCompany: refreshedUser.selectedCompany,
+              selectedDivision: refreshedUser.selectedDivision,
+            })
+
+            // ✅ CHECK IF DIVISION CHANGE WAS SUCCESSFUL
+            const divisionChangeSuccessful = refreshedUser.selectedDivision === selectedDivision
+            const companyChangeSuccessful = refreshedUser.selectedCompany === company
+            
+            if (divisionChangeSuccessful && companyChangeSuccessful) {
+              console.log('%c✅ BERHASIL! Division dan Company berhasil diubah', 'color: #16a34a; font-weight: bold; font-size: 14px;', {
+                previousDivision: userInfo?.selectedDivision,
+                newDivision: refreshedUser.selectedDivision,
+                previousCompany: userInfo?.selectedCompany,
+                newCompany: refreshedUser.selectedCompany,
+              })
+            } else {
+              console.error('%c❌ GAGAL! Division atau Company tidak berubah sesuai harapan', 'color: #dc2626; font-weight: bold; font-size: 14px;', {
+                requestedDivision: selectedDivision,
+                actualDivision: refreshedUser.selectedDivision,
+                divisionMatches: divisionChangeSuccessful,
+                requestedCompany: company,
+                actualCompany: refreshedUser.selectedCompany,
+                companyMatches: companyChangeSuccessful,
+                previousDivision: userInfo?.selectedDivision,
+                previousCompany: userInfo?.selectedCompany,
+              })
+            }
+
             nextUser = refreshedUser
             setFallbackUser(refreshedUser)
             setUser(refreshedUser, { replaceSelection: true })
+          } else {
+            console.warn('[SelectDivisionPage] No user in refreshed payload')
+            console.error('%c❌ GAGAL! Tidak ada user data di response', 'color: #dc2626; font-weight: bold; font-size: 14px;')
           }
+        } else {
+          console.warn('[SelectDivisionPage] Refresh response not ok')
+          console.error('%c❌ GAGAL! Response dari server tidak OK (HTTP %d)', 'color: #dc2626; font-weight: bold; font-size: 14px;', refreshedResponse.status)
         }
       } catch (refreshError) {
         console.warn('[SelectDivisionPage] Failed to refresh user info after access change', refreshError)
+        console.error('%c❌ GAGAL! Error saat refresh user info setelah ubah division', 'color: #dc2626; font-weight: bold; font-size: 14px;', refreshError.message)
+
       }
 
+      console.log('[SelectDivisionPage] Notifying access changed with user:', {
+        selectedCompany: nextUser?.selectedCompany,
+        selectedDivision: nextUser?.selectedDivision,
+      })
       notifyAccessChanged(nextUser)
       setIsRefreshing(false)
 
       if (ACCESS_ROUTE_PATHS.has(pathname)) {
+        console.log('[SelectDivisionPage] Redirecting to home because pathname is:', pathname)
         navigate('/', { replace: true })
         return
       }
 
+      console.log('[SelectDivisionPage] Closing division selector')
       handleClose()
     } catch (error) {
-      console.error('[SelectDivisionPage] Failed to save division', error)
+      console.error('[SelectDivisionPage] Exception during handleSelect:', {
+        errorMessage: error.message,
+        errorStack: error.stack,
+        selectedDivision,
+        selectedCompany,
+      })
+      console.error('%c❌ GAGAL! Error: %s', 'color: #dc2626; font-weight: bold; font-size: 14px;', error.message)
       setSubmitError(error.message || 'Gagal menyimpan divisi.')
     }
   }
@@ -499,6 +618,11 @@ export default function SelectDivisionPage({
                   key={`${division.class}-${division.name}-${index}`}
                   type="button"
                   onClick={() => {
+                    console.log('[SelectDivisionPage] User clicked division:', {
+                      company: division.name,
+                      division: division.class,
+                      jobLevel: division.jobLevel,
+                    })
                     setSelectedCompany(division.name || '')
                     setSelectedDivision(division.class || '')
                     setSelectedJobLevel(division.jobLevel || '')
