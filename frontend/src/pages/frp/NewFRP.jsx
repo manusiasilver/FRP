@@ -325,8 +325,16 @@ export default function NewFRP() {
 
   useEffect(() => {
     const query = searchParams.toString() ? `?${searchParams.toString()}` : ''
+    console.log('[NewFRP] Starting getFormData with query:', query)
     frpService.getFormData(query)
       .then(async data => {
+        console.log('[NewFRP] Form data loaded successfully:', {
+          selectedCompany: data.selectedCompany,
+          selectedDivision: data.selectedDivision,
+          userInfo: data.user ? { id: data.user.id, username: data.user.username, selectedCompany: data.user.selectedCompany, selectedDivision: data.user.selectedDivision } : null,
+          departmentsLength: data.departments?.length,
+          companiesLength: data.companies?.length,
+        })
         setFrpData(data)
       setUser(data?.user, { replaceSelection: true })
         const isDuplicate = searchParams.get('duplicate') === '1' || searchParams.get('duplicate') === 'true'
@@ -369,6 +377,7 @@ export default function NewFRP() {
                  editDiv = rp.departmentName || rp.divisi || initial.divisi;
               }
 
+              console.log('[NewFRP] Loaded from RP reference:', { rpNo: rp.rpNo, companyName: rp.companyName, itemsCount: mappedItems.length })
               setValues({
                 ...initial,
                 companyName: rp.companyName || initial.companyName,
@@ -385,19 +394,24 @@ export default function NewFRP() {
               return
             }
           } catch (e) {
-            console.error('Failed to load RP data:', e)
+            console.error('[NewFRP] Failed to load RP data:', e)
           }
         }
 
+        console.log('[NewFRP] Setting initial form values:', { company: initial.companyName, division: initial.kelas })
         setValues(initial)
       })
       .catch(err => {
+        console.error('[NewFRP] Error in getFormData:', err)
         if (err.status === 401 || err.status === 403) {
           window.location.href = '/'
         }
         setError(err.message || 'Gagal memuat data')
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        console.log('[NewFRP] Form data loading completed')
+        setLoading(false)
+      })
   }, [])
 
   useEffect(() => {
@@ -408,6 +422,17 @@ export default function NewFRP() {
 
   const FRP = frpData || {}
   const activeUser = sessionUser || FRP.user || {}
+  
+  useEffect(() => {
+    console.log('[NewFRP] Active user/sessionUser changed:', {
+      activeUserId: activeUser?.id,
+      activeUsername: activeUser?.username,
+      activeUserSelectedCompany: activeUser?.selectedCompany,
+      activeUserSelectedDivision: activeUser?.selectedDivision,
+      sessionUserExists: !!sessionUser,
+      frpUserExists: !!FRP.user,
+    })
+  }, [activeUser, sessionUser])
   const isMobile = viewportWidth < MOBILE_BREAKPOINT
   const isTablet = viewportWidth >= MOBILE_BREAKPOINT && viewportWidth < TABLET_BREAKPOINT
 
@@ -424,6 +449,8 @@ export default function NewFRP() {
 
   useEffect(() => {
     if (!activeUser) return
+
+    console.log('[NewFRP] User changed, syncing form with activeUser:', { userId: activeUser.id, selectedCompany: activeUser.selectedCompany, selectedDivision: activeUser.selectedDivision })
 
     setValues(prev => {
       const nextCompany = prev.companyName || activeUser.selectedCompany || ''
@@ -442,9 +469,11 @@ export default function NewFRP() {
         prev.kelas === nextClass &&
         prev.dimintaOleh === nextRequestBy
       ) {
+        console.log('[NewFRP] Form values already in sync with activeUser, no update needed')
         return prev
       }
 
+      console.log('[NewFRP] Form values updated from activeUser:', { company: nextCompany, division: nextDivision, class: nextClass })
       return {
         ...prev,
         companyName: nextCompany,
@@ -628,11 +657,24 @@ export default function NewFRP() {
 
   const handlePreSubmit = async e => {
     e.preventDefault()
+    console.log('[NewFRP] handlePreSubmit triggered')
+    console.log('[NewFRP] Form data at submission:', {
+      companyName: values.companyName,
+      divisi: values.divisi,
+      kelas: values.kelas,
+      dimintaOleh: values.dimintaOleh,
+      currency: values.currency,
+      kurs: values.kurs,
+      itemsCount: values.items?.length,
+      totalAmount,
+      frpId: values.id,
+    })
     setSubmitError(null)
     setSubmitting(true)
 
     try {
       // Cek ke database terlebih dahulu untuk mendapatkan sisa budget ter-update
+      console.log('[NewFRP] Fetching latest budgets from /api/frp/budgets')
       const resBudgets = await fetch('/api/frp/budgets')
       if (!resBudgets.ok) {
         throw new Error('Gagal memeriksa budget terbaru dari database. Silakan coba lagi.')
@@ -659,15 +701,18 @@ export default function NewFRP() {
       }, {})
 
       // Validasi limit budget per budgetId agar multi-item dengan budget yang sama ikut terhitung
+      console.log('[NewFRP] Validating budgets:', { budgetIds: Object.keys(requestedByBudget), latestBudgetsCount: latestBudgets?.length })
       for (const [budgetId, requested] of Object.entries(requestedByBudget)) {
         const dbBudget = latestBudgets.find(b => b.id === budgetId)
         if (!dbBudget) {
+          console.error('[NewFRP] Budget ID not found in database:', budgetId)
           setSubmitError(`Budget ID ${budgetId} tidak ditemukan di database.`)
           setSubmitting(false)
           return
         }
 
         const dbRemaining = getBudgetRemainingValue(dbBudget)
+        console.log('[NewFRP] Budget check for:', { budgetId, dbRemaining, requestedTotal: requested.totalAmount, requestedMax: requested.maxUnitPrice })
 
         let revertedAmount = 0
         if (isRevision) {
@@ -699,10 +744,15 @@ export default function NewFRP() {
   }
 
   const processSubmit = async () => {
+    console.log('[NewFRP] processSubmit started')
     setIsConfirmOpen(false)
     setSubmitting(true)
     try {
       const selectedDept = findDepartmentByValue(departments, values.divisi);
+      console.log('[NewFRP] Selected department lookup:', {
+        divisiValue: values.divisi,
+        selectedDept: selectedDept ? { id: selectedDept.id, name: selectedDept.name, class: selectedDept.class } : null,
+      })
       const activeSelectedDept = findDepartmentByValue(departments, activeUser?.selectedDivision);
       const selectedClass = values.kelas || selectedDept?.class || activeSelectedDept?.class || '';
 
@@ -743,12 +793,17 @@ export default function NewFRP() {
         })),
       }
 
+      console.log('[NewFRP] Submitting FRP payload to backend')
       const d = await frpService.saveFrp(payload)
+      console.log('[NewFRP] Backend response received:', { success: d.success, id: d.id, frpNo: d.frpNo, errorMsg: d.error })
 
       if (d.success) {
+        console.log('[NewFRP] FRP successfully saved')
         if (values.attachFile) {
           try {
+            console.log('[NewFRP] Uploading attachment')
             await frpService.uploadAttachment(d.id, values.attachFile)
+            console.log('[NewFRP] Attachment uploaded successfully')
           } catch (uploadErr) {
             console.error('Failed to upload attachment:', uploadErr)
           }
@@ -761,9 +816,11 @@ export default function NewFRP() {
           frpNo: d.frpNo || d.data?.frpNo || values.frpNo || d.id || values.id || '',
         })
       } else {
+        console.error('[NewFRP] FRP save failed:', d.error)
         setSubmitError(d.error || 'Gagal menyimpan, coba lagi.')
       }
     } catch (err) {
+      console.error('[NewFRP] Exception during processSubmit:', err)
       setSubmitError(err.message || 'Koneksi gagal, coba lagi.')
     } finally {
       setSubmitting(false)
