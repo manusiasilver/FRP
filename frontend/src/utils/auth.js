@@ -2,6 +2,7 @@ const TOKEN_KEY = 'token'
 const AUTH_USER_KEY = 'authUser'
 export const POST_LOGIN_ACCESS_DIALOG_KEY = 'frp:post-login-access-dialog'
 export const ACCESS_DIALOG_CHECKED_USER_KEY = 'frp:access-dialog-checked-user'
+export const ACCESS_CHANGED_EVENT = 'frp:access-changed'
 
 export function isJwtLike(token) {
   if (typeof token !== 'string') return false
@@ -82,6 +83,20 @@ export function isPageReload() {
   } catch (_) {
     return false
   }
+}
+
+export function notifyAccessChanged(user = null) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.dispatchEvent(new CustomEvent(ACCESS_CHANGED_EVENT, {
+    detail: {
+      selectedCompany: user?.selectedCompany || '',
+      selectedDivision: user?.selectedDivision || '',
+      selectedJobLevel: user?.selectedJobLevel || '',
+    },
+  }))
 }
 
 function cleanUrlAuthParams() {

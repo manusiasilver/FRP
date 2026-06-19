@@ -14,6 +14,7 @@ import ButtonAccessStaffRp from '../../components/button/ButtonAccessStaffRp.jsx
 import FilterApprovalRp from './FilterApprovalRp.jsx'
 import TabsFilterApprovalRp from './TabsFilterApprovalRp.jsx'
 import { getRpApprovalMode } from '../../utils/rpApproval'
+import { ACCESS_CHANGED_EVENT } from '../../utils/auth'
 
 const MOBILE_BREAKPOINT = 768
 const TABLET_BREAKPOINT = 1100
@@ -225,7 +226,7 @@ export default function RpApprovalPage() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const isApprovedView = pathname === '/rp-approved'
-  const { setUser } = useUser()
+  const { user: sessionUser, setUser } = useUser()
   const [data, setData] = useState(null)
   const [counts, setCounts] = useState({})
   const [loading, setLoading] = useState(true)
@@ -252,7 +253,9 @@ export default function RpApprovalPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [tabDropdownOpen, setTabDropdownOpen] = useState(false)
   const tabDropdownRef = useRef(null)
-  const currentUser = data?.user || null
+  const currentUser = data?.user || sessionUser || null
+  const selectedCompany = sessionUser?.selectedCompany || ''
+  const selectedDivision = sessionUser?.selectedDivision || ''
   const approvalMode = getRpApprovalMode(currentUser)
   const currentUserJobLevelRank = getUserJobLevelRank(currentUser)
   const isMobile = viewportWidth < MOBILE_BREAKPOINT
@@ -335,7 +338,17 @@ export default function RpApprovalPage() {
       .finally(() => setLoading(false))
 
     return () => ctrl.abort()
-  }, [tab, filters, currentPage, rowsPerPage, sortConfig, refreshKey])
+  }, [tab, filters, currentPage, rowsPerPage, sortConfig, refreshKey, selectedCompany, selectedDivision])
+
+  useEffect(() => {
+    const handleAccessChanged = () => {
+      setCurrentPage(1)
+      setRefreshKey(key => key + 1)
+    }
+
+    window.addEventListener(ACCESS_CHANGED_EVENT, handleAccessChanged)
+    return () => window.removeEventListener(ACCESS_CHANGED_EVENT, handleAccessChanged)
+  }, [])
 
   useEffect(() => {
     if (pathname === '/rp-approval') return

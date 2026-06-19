@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { usePageLoadingDialog } from '../contexts/PageLoadingContext'
 import { useUser } from '../contexts/UserContext'
 import DialogChangeAccess from '../components/Dialog/DialogChangeAccess.jsx'
+import { notifyAccessChanged } from '../utils/auth'
 
 const ACCESS_ROUTE_PATHS = new Set(['/select-company', '/select-division'])
 
@@ -334,17 +335,24 @@ export default function SelectDivisionPage({
       }
 
       const result = await response.json().catch(() => ({}))
+      let nextUser = null
+
       if (result?.user) {
-        setUser(result.user, { replaceSelection: true })
+        nextUser = result.user
       } else if (userInfo) {
-        setUser({
+        nextUser = {
           ...userInfo,
           selectedCompany: company,
           selectedCompanyId: selectedCompanyOption?.id || userInfo?.selectedCompanyId || '',
           selectedCompanyCode: selectedCompanyOption?.code || userInfo?.selectedCompanyCode || '',
           selectedDivision,
           selectedJobLevel,
-        }, { replaceSelection: true })
+        }
+      }
+
+      if (nextUser) {
+        setFallbackUser(nextUser)
+        setUser(nextUser, { replaceSelection: true })
       }
 
       try {
@@ -361,6 +369,8 @@ export default function SelectDivisionPage({
           const refreshedUser = refreshedPayload?.user || refreshedPayload || null
 
           if (refreshedUser) {
+            nextUser = refreshedUser
+            setFallbackUser(refreshedUser)
             setUser(refreshedUser, { replaceSelection: true })
           }
         }
@@ -368,17 +378,15 @@ export default function SelectDivisionPage({
         console.warn('[SelectDivisionPage] Failed to refresh user info after access change', refreshError)
       }
 
-      setIsRefreshing(true)
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          if (ACCESS_ROUTE_PATHS.has(pathname)) {
-            window.location.assign('/')
-            return
-          }
+      notifyAccessChanged(nextUser)
+      setIsRefreshing(false)
 
-          window.location.reload()
-        })
-      })
+      if (ACCESS_ROUTE_PATHS.has(pathname)) {
+        navigate('/', { replace: true })
+        return
+      }
+
+      handleClose()
     } catch (error) {
       console.error('[SelectDivisionPage] Failed to save division', error)
       setSubmitError(error.message || 'Gagal menyimpan divisi.')

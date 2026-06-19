@@ -5,6 +5,7 @@ import DialogFrpDetail from '../../components/Dialog/DialogDetailFrp'
 import DialogConfirm from '../../components/Dialog/DialogConfirm'
 import { usePageLoadingDialog } from '../../contexts/PageLoadingContext'
 import { useUser } from '../../contexts/UserContext'
+import { ACCESS_CHANGED_EVENT } from '../../utils/auth'
 import DataTableApprovalFrp from '../../components/table/DataTableApprovalFrp'
 import DialogSuccesAction from '../../components/Dialog/DialogSuccesAction'
 import DialogFailAction from '../../components/Dialog/DialogFailAction'
@@ -303,6 +304,8 @@ export default function ApprovalFRP() {
   const [confirmAction, setConfirmAction] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionResultDialog, setActionResultDialog] = useState(null)
+  const selectedCompany = user?.selectedCompany || ''
+  const selectedDivision = user?.selectedDivision || ''
 
   usePageLoadingDialog(loading && !data, {
     title: 'Memuat Approval FRP',
@@ -352,12 +355,23 @@ export default function ApprovalFRP() {
       .finally(() => setLoading(false))
     return () => ctrl.abort()
   }, [isApprovedView, currentPage, rowsPerPage, sortConfig.key, sortConfig.direction,
-    filters.search, filters.date, filters.requester, filters.status, filters.division, refreshKey])
+    filters.search, filters.date, filters.requester, filters.status, filters.division, refreshKey,
+    selectedCompany, selectedDivision])
 
   useEffect(() => {
     const handler = e => { if (e.data === 'refresh') setRefreshKey(k => k + 1) }
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
+  }, [])
+
+  useEffect(() => {
+    const handleAccessChanged = () => {
+      setCurrentPage(1)
+      setRefreshKey(key => key + 1)
+    }
+
+    window.addEventListener(ACCESS_CHANGED_EVENT, handleAccessChanged)
+    return () => window.removeEventListener(ACCESS_CHANGED_EVENT, handleAccessChanged)
   }, [])
 
   useEffect(() => {
