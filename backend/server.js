@@ -16,6 +16,7 @@ const { devAuth } = require('./src/middleware/devAuth');
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const MySQLSessionStore = require('./src/session/MySQLSessionStore');
 
 // --- Routes ---
 const authRoutes      = require('./src/routes/auth');
@@ -34,7 +35,7 @@ const IS_DEV = process.env.NODE_ENV !== 'production';
 
 const frontendPath = path.join(__dirname, '..', 'frontend');
 const pdfPath      = path.join(__dirname, 'generated-pdfs');
-const { centralDb } = require('./db');
+const { frpDb, centralDb } = require('./db');
 const { LOGIN_SQL } = require('./src/config/constants');
 const { userFromLoginRows } = require('./src/services/dbService');
 const jwt = require('jsonwebtoken');
@@ -80,7 +81,13 @@ app.use((req, res, next) => {
 // ============================================================
 // SESSION
 // ============================================================
+const sessionStore = new MySQLSessionStore(frpDb, {
+    tableName: process.env.SESSION_TABLE_NAME || 'sessions',
+});
+
 app.use(session({
+    store: sessionStore,
+    name: process.env.SESSION_COOKIE_NAME || 'frp.sid',
     secret: process.env.SESSION_SECRET || 'frp-secret-key-2024',
     resave: false,
     saveUninitialized: false,
