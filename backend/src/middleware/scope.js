@@ -4,7 +4,38 @@ function normalizeDivision(value) {
     return String(value || '').trim().toUpperCase();
 }
 
-function getUserScopedDivisions(user, companyName = '') {
+function getTextValue(...values) {
+    return values.find(value => String(value || '').trim()) || '';
+}
+
+function isStaffScopedUser(user) {
+    if (!user) return false;
+
+    const assignmentRank = Number(user?.allAssignments?.[0]?.job_level_rank || 0);
+    const jobLevelRank = Number(
+        user?.jobLevelRank ||
+        user?.job_level_rank ||
+        user?.job_level_value ||
+        assignmentRank ||
+        0
+    );
+    const jobLevelName = String(getTextValue(
+        user?.selectedJobLevel,
+        user?.jobLevelName,
+        user?.job_level,
+        user?.allAssignments?.[0]?.job_level_name
+    )).trim().toLowerCase();
+    const role = String(getTextValue(
+        user?.role,
+        user?.userRole,
+        user?.selectedRole
+    )).trim().toLowerCase();
+
+    return jobLevelRank <= 1 || /\bstaff\b/.test(jobLevelName) || role === 'staff';
+}
+
+function getUserScopedDivisions(user, companyName = '', options = {}) {
+    const { selectedOnly = false } = options;
     const divisions = [];
     const seen = new Set();
     const targetCompany = String(
@@ -21,6 +52,11 @@ function getUserScopedDivisions(user, companyName = '') {
         seen.add(normalizedValue);
         divisions.push(normalizedValue);
     };
+
+    addDivision(user?.selectedDivision || user?.departmentClass || user?.departmentName);
+    if (selectedOnly) {
+        return divisions;
+    }
 
     const assignmentMatchesCompany = (assignment) => {
         const assignmentCompany = String(
@@ -69,16 +105,14 @@ function getUserScopedDivisions(user, companyName = '') {
         });
     }
 
-    addDivision(user?.selectedDivision || user?.departmentClass || user?.departmentName);
-
     return divisions;
 }
 
-function hasUserDivisionAccess(user, division, companyName = '') {
+function hasUserDivisionAccess(user, division, companyName = '', options = {}) {
     const normalizedDivision = normalizeDivision(division);
     if (!normalizedDivision) return false;
 
-    return getUserScopedDivisions(user, companyName).includes(normalizedDivision);
+    return getUserScopedDivisions(user, companyName, options).includes(normalizedDivision);
 }
 
 function canViewRpProcessDivision(userDivision, processDivision) {
@@ -98,9 +132,9 @@ function canViewRpProcessDivision(userDivision, processDivision) {
     });
 }
 
-function canUserViewRpProcessDivision(user, processDivision, companyName = '') {
+function canUserViewRpProcessDivision(user, processDivision, companyName = '', options = {}) {
     return canViewRpProcessDivision(
-        getUserScopedDivisions(user, companyName),
+        getUserScopedDivisions(user, companyName, options),
         processDivision
     );
 }
@@ -108,28 +142,29 @@ function canUserViewRpProcessDivision(user, processDivision, companyName = '') {
 /**
  * Checks if a FRP request is within the logged-in user's scope (company + division).
  */
-function isRequestInUserScope(request, user) {
+function isRequestInUserScope(request, user, options = {}) {
     if (user.role === 'administrator') return true;
     return sameCompanyName(request.companyName, user.selectedCompany) &&
-           hasUserDivisionAccess(user, request.divisi, request.companyName);
+           hasUserDivisionAccess(user, request.divisi, request.companyName, options);
 }
 
 /**
  * Checks if an RP request is within the logged-in user's scope.
  * Optionally includes the "process division" for procurement checks.
  */
-function isRpInUserScope(request, user, includeProcessDivision = false) {
+function isRpInUserScope(request, user, includeProcessDivision = false, options = {}) {
     if (user.role === 'administrator') return true;
     if (!sameCompanyName(request.companyName, user.selectedCompany)) return false;
     const requestDivision = request.divisi;
     const requestProcessDivision = request.diprosesOleh || request.divisi;
 
-    return hasUserDivisionAccess(user, requestDivision, request.companyName) ||
-           (includeProcessDivision && canUserViewRpProcessDivision(user, requestProcessDivision, request.companyName));
+    return hasUserDivisionAccess(user, requestDivision, request.companyName, options) ||
+           (includeProcessDivision && canUserViewRpProcessDivision(user, requestProcessDivision, request.companyName, options));
 }
 
 module.exports = {
     getUserScopedDivisions,
+    isStaffScopedUser,
     hasUserDivisionAccess,
     isRequestInUserScope,
     isRpInUserScope,

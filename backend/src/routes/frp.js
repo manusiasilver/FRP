@@ -35,7 +35,7 @@ const {
     filterDepartmentsForUser,
     filterBudgetsForUser,
 } = require('../services/frpService');
-const { getUserScopedDivisions, hasUserDivisionAccess } = require('../middleware/scope');
+const { getUserScopedDivisions, hasUserDivisionAccess, isRequestInUserScope, isStaffScopedUser } = require('../middleware/scope');
 
 const router = express.Router();
 
@@ -556,7 +556,6 @@ router.get('/api/form-data', checkAuth, async (req, res) => {
 async function sendFrpApprovalView(req, res, forcedView, section = 'full') {
     try {
         const u = req.session.user;
-        const { isRequestInUserScope } = require('../middleware/scope');
         const routeValue = (key, fallback = '') => req.params[key] || req.query[key] || fallback;
 
         const view = forcedView || req.query.view || 'pending';
@@ -575,10 +574,13 @@ async function sendFrpApprovalView(req, res, forcedView, section = 'full') {
         const sortDir   = (sortOrder === 'asc' || sortOrder === 'ascending') ? 'asc' : 'desc';
 
         const hasLookAccess = await canLookAllFrp(u);
+        const selectedOnlyScope = isStaffScopedUser(u);
         let all = await fetchAllFrpRequests();
 
         // scope filter
-        if (!hasLookAccess) all = all.filter(r => isRequestInUserScope(r, u));
+        if (!hasLookAccess) {
+            all = all.filter(r => isRequestInUserScope(r, u, { selectedOnly: selectedOnlyScope }));
+        }
         if (!isAllView && isDivisionRestrictedFrpApprover(u)) {
             all = all.filter(r => canApproveFrpRequest(u, r));
         }

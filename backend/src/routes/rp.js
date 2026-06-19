@@ -3,7 +3,7 @@ const { checkAuth } = require('../middleware/auth');
 const { readJson, writeJson } = require('../utils/json');
 const { getAllEmployees, getCompanies, getDepartmentRows, getDeptCode, getCompanyId, getDeptId, fetchAllFrpRequests, fetchAllRpRequests } = require('../services/dbService');
 const { sameCompanyName } = require('../utils/company');
-const { getUserScopedDivisions, hasUserDivisionAccess, canUserViewRpProcessDivision } = require('../middleware/scope');
+const { getUserScopedDivisions, hasUserDivisionAccess, canUserViewRpProcessDivision, isStaffScopedUser } = require('../middleware/scope');
 const db = require('../../db');
 const crypto = require('crypto');
 
@@ -1065,6 +1065,7 @@ router.post('/api/rp/save', checkAuth, async (req, res) => {
 router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
     const u = req.session.user;
     const view = req.query.view || 'pending';
+    const selectedOnlyScope = isStaffScopedUser(u);
 
     const search    = (req.query.search    || '').toLowerCase().trim();
     const status    = (req.query.status    || '').trim();
@@ -1081,14 +1082,20 @@ router.get('/api/data/rp-approval', checkAuth, async (req, res) => {
     const lookScope = await getRpLookScope(u);
     const hasOwnDivisionScope = (request) => (
         sameCompanyName(request.companyName, u.selectedCompany || u.companyName) &&
-        hasUserDivisionAccess(u, request.divisi || request.departmentClass, request.companyName)
+        hasUserDivisionAccess(
+            u,
+            request.divisi || request.departmentClass,
+            request.companyName,
+            { selectedOnly: selectedOnlyScope }
+        )
     );
     const hasProcessorScope = (request) => (
         sameCompanyName(request.companyName, u.selectedCompany || u.companyName) &&
         canUserViewRpProcessDivision(
             u,
             request.diprosesOleh || request.processedByDepartment || request.divisi,
-            request.companyName
+            request.companyName,
+            { selectedOnly: selectedOnlyScope }
         )
     );
     const isPendingScope = request =>
