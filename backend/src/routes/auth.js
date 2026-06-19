@@ -102,6 +102,24 @@ function respondAfterSessionSave(req, res, onSuccess) {
     });
 }
 
+function saveSelectedAuthScope(req, res, next) {
+    const user = req.session.user;
+    const requestedCompany = req.body.company || user.selectedCompany;
+    const requestedDivision = req.body.division;
+    const assignment = findAssignment(user, requestedCompany, requestedDivision);
+
+    if (assignment || findCompany(user, requestedCompany)) {
+        applySelectedAssignment(req, assignment, requestedCompany, requestedDivision);
+    }
+
+    respondAfterSessionSave(req, res, () => {
+        res.json({
+            success: true,
+            user: req.session.user,
+        });
+    });
+}
+
 // ============================================================
 // AUTH PAGES (HTML redirects)
 // ============================================================
@@ -286,19 +304,8 @@ router.get('/api/data/select-division', checkAuth, (req, res) => {
     });
 });
 
-router.post('/api/auth/select-division', checkAuth, (req, res) => {
-    const user = req.session.user;
-    const div = req.body.division;
-    const requestedCompany = req.body.company || user.selectedCompany;
-    const assignment = findAssignment(user, requestedCompany, div);
-    if (assignment || findCompany(user, requestedCompany)) {
-        applySelectedAssignment(req, assignment, requestedCompany, div);
-    }
-    respondAfterSessionSave(req, res, () => res.json({
-        success: true,
-        redirect: '/',
-        user: req.session.user,
-    }));
-});
+router.post('/api/auth/me', checkAuth, saveSelectedAuthScope);
+
+router.post('/api/auth/select-division', checkAuth, saveSelectedAuthScope);
 
 module.exports = router;

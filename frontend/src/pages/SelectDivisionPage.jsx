@@ -322,7 +322,7 @@ export default function SelectDivisionPage({
     const company = selectedItem?.name || selectedCompany || userInfo?.selectedCompany || ''
 
     try {
-      const response = await fetch('/api/auth/select-division', {
+      const response = await fetch('/api/auth/me', {
         method: 'POST',
         credentials: 'include',
         cache: 'no-store',
