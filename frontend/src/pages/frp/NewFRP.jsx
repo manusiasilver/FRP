@@ -606,7 +606,7 @@ export default function NewFRP() {
     normalizeNumber(item.qty) * normalizeNumber(item.hargaSatuan) * (normalizeNumber(values.kurs) || 1)
 
   const getBudgetAmount = budgetId => {
-    const b = (frpData?.budgets || []).find(x => x.id === budgetId)
+    const b = (frpData?.budgets || []).find(x => String(x.id) === String(budgetId))
     return getBudgetRemainingValue(b)
   }
 

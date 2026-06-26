@@ -33,13 +33,18 @@ export default function DataTableItemsFrp({
   currency = 'IDR'
 }) {
   const getBudgetObj = budgetId => {
-    return (budgets || []).find(b => b.id === budgetId)
+    return (budgets || []).find(b => String(b.id) === String(budgetId))
   }
 
   const getBaseBudgetRemaining = budgetId => {
     const b = getBudgetObj(budgetId)
     if (!b) return 0
-    return b.budget_remaining !== undefined ? b.budget_remaining : (b.sisa_budget !== undefined ? b.sisa_budget : (b.sisaBudget !== undefined ? b.sisaBudget : (b.remainingAmount !== undefined ? b.remainingAmount : 0)))
+    if (b.budgetRemaining !== undefined) return Number(b.budgetRemaining || 0)
+    if (b.budget_remaining !== undefined) return Number(b.budget_remaining || 0)
+    if (b.sisa_budget !== undefined) return Number(b.sisa_budget || 0)
+    if (b.sisaBudget !== undefined) return Number(b.sisaBudget || 0)
+    if (b.remainingAmount !== undefined) return Number(b.remainingAmount || 0)
+    return 0
   }
 
   const getItemSubtotal = item => {
