@@ -202,9 +202,21 @@ router.get('/api/company', checkAuth, async (req, res) => {
     }
 });
 
-router.get('/api/vendors', checkAuth, (req, res) => {
+async function getVendorsFromDb() {
+    const [rows] = await db.query(
+        'SELECT id, name, bank, no_rekening FROM master_vendor ORDER BY name ASC'
+    );
+    return rows.map(r => ({
+        id:          r.id,
+        name:        r.name        || '',
+        bank:        r.bank        || '',
+        no_rekening: r.no_rekening || '',
+    }));
+}
+
+router.get('/api/vendors', checkAuth, async (req, res) => {
     try {
-        res.json(readJson('vendors.json'));
+        res.json(await getVendorsFromDb());
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -384,7 +396,7 @@ router.get('/api/frp/form-options', checkAuth, async (req, res) => {
             getDepartmentEmployeesByUserId(u.id),
             db.query(BUDGET_SELECT_SQL),
             getCompanies(),
-            Promise.resolve(readJson('vendors.json')),
+            getVendorsFromDb(),
             getDepartmentRows(),
             fetchAllFrpRequests(),
         ]);
@@ -502,7 +514,7 @@ router.get('/api/form-data', checkAuth, async (req, res) => {
             getDepartmentEmployeesByUserId(u.id),
             db.query(BUDGET_SELECT_SQL),
             getCompanies(),
-            Promise.resolve(readJson('vendors.json')),
+            getVendorsFromDb(),
             getDepartmentRows(),
         ]);
 

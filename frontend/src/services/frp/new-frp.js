@@ -6,7 +6,7 @@ const getMyTeam      = ()        => api.get('/api/user/departement')
 const getDepartments = ()        => api.get('/api/departments')
 const getCompanies   = ()        => api.get('/api/company')
 const getVendors     = ()        => api.get('/api/vendors')
-const getBudgets     = ()        => api.get('/api/frp/budgets')
+const getBudgets     = ()        => api.get('/api/budgets')
 const getUserInfo    = async ()  => {
   const data = await api.get('/api/auth/me')
   return data?.user || data || null

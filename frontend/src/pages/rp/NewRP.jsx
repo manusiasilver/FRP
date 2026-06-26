@@ -449,8 +449,8 @@ export default function NewRP({
     return scopedBudgets.filter(b => {
       if (selectedDept?.canCrossBudget) return true   // HCGA/IT/etc. can use any budget
       if (!selectedDept) return true                  // no division selected yet — show all accessible
-      const bClass = (b.class      || '').trim().toUpperCase()
-      const bDept  = (b.department || '').trim().toUpperCase()
+      const bClass = (b.departmentClass || b.class || '').trim().toUpperCase()
+      const bDept  = (b.departmentName || b.department || '').trim().toUpperCase()
       const selCls = (selectedDept.class || '').trim().toUpperCase()
       return bClass === selCls || bDept === selCls
     })
@@ -467,7 +467,7 @@ export default function NewRP({
   const canChangeDivision = isAdmin || divisionOptions.length > 1
   const vendorOptions = useMemo(() => (D.vendors || []).map(v => ({ value: v.name, label: v.name })), [D.vendors])
   const kategoriOptions = ['Pengadaan Barang Baru', 'Pergantian Barang', 'Penambahan Barang'].map(k => ({ value: k, label: k }))
-  const budgetSelectOpts = useMemo(() => budgetOptions.map(b => ({ value: b.id, label: `${b.id} - ${b.description}`, keywords: `${b.id} ${b.description}` })), [budgetOptions])
+  const budgetSelectOpts = useMemo(() => budgetOptions.map(b => ({ value: b.id, label: `${b.id} - ${b.projectName || b.budgetType || 'Budget'}`, keywords: `${b.id} ${b.projectName} ${b.budgetType}` })), [budgetOptions])
 
   const totalAmount = useMemo(() => values.items.reduce((s, it) => s + normalizeNumber(it.qty) * normalizeNumber(it.estimatedValue), 0), [values.items])
   const processId = embeddedProcessId || searchParams.get('process')
@@ -481,7 +481,7 @@ export default function NewRP({
 
   const getBudgetRemaining = (budgetId) => {
     const b = (D.budgets || []).find(x => x.id === budgetId)
-    return b ? b.remainingAmount : null
+    return b ? (b.budgetRemaining ?? b.remainingAmount) : null
   }
 
   const handleSubmit = async e => {

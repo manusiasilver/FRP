@@ -371,6 +371,18 @@ async function validateRpBudgetAccess(client, user, items) {
 
 
 
+async function getVendorsFromDb() {
+    const [rows] = await db.query(
+        'SELECT id, name, bank, no_rekening FROM master_vendor ORDER BY name ASC'
+    );
+    return rows.map(r => ({
+        id:          r.id,
+        name:        r.name        || '',
+        bank:        r.bank        || '',
+        no_rekening: r.no_rekening || '',
+    }));
+}
+
 // ============================================================
 // RP PAGES
 // ============================================================
@@ -576,7 +588,7 @@ async function rpFormData(req, res) {
         ] = await Promise.all([
             getDepartmentRows(),
             getCompanies(),
-            Promise.resolve(readJson('vendors.json')),
+            getVendorsFromDb(),
             fetchAllRpRequests(),
             fetchAllFrpRequests(),
             db.query(`SELECT id, department_id, department_name, department_class,
@@ -1273,7 +1285,7 @@ router.get('/api/rp/:id', checkAuth, async (req, res) => {
         res.json({
             data,
             employees,
-            vendors: readJson('vendors.json'),
+            vendors: await getVendorsFromDb(),
             budgets: mappedBudgets,
             user,
             isAdmin,

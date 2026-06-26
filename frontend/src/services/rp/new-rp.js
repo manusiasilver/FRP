@@ -8,7 +8,7 @@ const getUserInfo        = async () => {
   const data = await api.get('/api/auth/me')
   return data?.user || data || null
 }
-const getBudgets         = ()    => api.get('/api/rp/budgets')
+const getBudgets         = ()    => api.get('/api/budgets')
 const getProcessorDepts  = ()    => api.get('/api/rp/processor-departments')
 const getCrossBudgetDivs = ()    => api.get('/api/rp/cross-budget-divisions')
 

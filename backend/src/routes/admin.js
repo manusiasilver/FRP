@@ -154,6 +154,14 @@ router.post('/api/admin/:type/add', checkAuth, checkIT, async (req, res) => {
                 newItem.budgetAmount ?? newItem.totalAmount
             );
 
+            // Accept both form field names (description/type/class/department)
+            // and API field names (projectName/budgetType/departmentClass/departmentName)
+            const projectName   = newItem.projectName   ?? newItem.description  ?? '';
+            const budgetType    = newItem.budgetType     ?? newItem.type         ?? '';
+            const departmentName  = newItem.departmentName  ?? newItem.department  ?? '';
+            const departmentClass = newItem.departmentClass ?? newItem.class       ?? '';
+            const departmentCode  = newItem.departmentCode  ?? newItem.code        ?? '';
+
             const budgetId = newItem.id;
 
             if (!budgetId) {
@@ -163,10 +171,10 @@ router.post('/api/admin/:type/add', checkAuth, checkIT, async (req, res) => {
                 });
             }
 
-            if (!newItem.projectName) {
+            if (!projectName) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Project name is required',
+                    error: 'Project name / Deskripsi is required',
                 });
             }
 
@@ -187,11 +195,11 @@ router.post('/api/admin/:type/add', checkAuth, checkIT, async (req, res) => {
             `, [
                 budgetId,
                 newItem.departmentId || null,
-                newItem.departmentName || '',
-                newItem.departmentClass || '',
-                newItem.departmentCode || '',
-                newItem.projectName || '',
-                newItem.budgetType || '',
+                departmentName,
+                departmentClass,
+                departmentCode,
+                projectName,
+                budgetType,
                 budgetAmount,
                 budgetAmount,
                 newItem.isActive === false ? 0 : 1,
@@ -299,6 +307,13 @@ router.post('/api/admin/:type/edit/:index', checkAuth, checkIT, async (req, res)
                 updatedItem.budgetAmount ?? updatedItem.totalAmount ?? oldItem.budget_amount
             );
 
+            // Accept both form field names and API field names
+            const projectName     = updatedItem.projectName   ?? updatedItem.description  ?? '';
+            const budgetType      = updatedItem.budgetType     ?? updatedItem.type         ?? '';
+            const departmentName  = updatedItem.departmentName  ?? updatedItem.department  ?? '';
+            const departmentClass = updatedItem.departmentClass ?? updatedItem.class       ?? '';
+            const departmentCode  = updatedItem.departmentCode  ?? updatedItem.code        ?? '';
+
             await db.query(`
                 UPDATE master_budgets
                 SET
@@ -316,11 +331,11 @@ router.post('/api/admin/:type/edit/:index', checkAuth, checkIT, async (req, res)
             `, [
                 updatedItem.id || oldItem.id,
                 updatedItem.departmentId || null,
-                updatedItem.departmentName || '',
-                updatedItem.departmentClass || '',
-                updatedItem.departmentCode || '',
-                updatedItem.projectName || '',
-                updatedItem.budgetType || '',
+                departmentName,
+                departmentClass,
+                departmentCode,
+                projectName,
+                budgetType,
                 budgetAmount,
                 budgetAmount,
                 updatedItem.isActive === false ? 0 : 1,

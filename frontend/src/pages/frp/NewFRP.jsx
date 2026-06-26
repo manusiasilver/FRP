@@ -64,6 +64,7 @@ const isITUser = user => {
 }
 const getBudgetRemainingValue = budget => {
   if (!budget) return 0
+  if (budget.budgetRemaining !== undefined) return Number(budget.budgetRemaining || 0)
   if (budget.budget_remaining !== undefined) return Number(budget.budget_remaining || 0)
   if (budget.sisa_budget !== undefined) return Number(budget.sisa_budget || 0)
   if (budget.sisaBudget !== undefined) return Number(budget.sisaBudget || 0)
@@ -594,10 +595,10 @@ export default function NewFRP() {
     return scopedBudgets.filter(b => {
       if (hasFullBudgetAccess(selectedDept)) return true
       if (!selectedDept) return true
-      const bDeptId = String(b.department_id ?? b.departmentId ?? '')
+      const bDeptId = String(b.departmentId ?? b.department_id ?? '')
       const dId = String(selectedDept.originalIndex ?? selectedDept.id ?? '')
       if (bDeptId && dId && bDeptId === dId) return true
-      return normalizeCompany(b.department) === normalizeCompany(selectedDept.name)
+      return normalizeCompany(b.departmentName || b.department) === normalizeCompany(selectedDept.name)
     })
   }, [FRP.budgets, departments, values.companyName, values.divisi])
 
@@ -674,7 +675,7 @@ export default function NewFRP() {
     [],
   )
   const budgetSelectOptions = useMemo(
-    () => budgetOptions.map(budget => ({ value: budget.id, label: `${budget.id} - ${budget.description}`, keywords: `${budget.id} ${budget.description}` })),
+    () => budgetOptions.map(budget => ({ value: budget.id, label: `${budget.id} - ${budget.projectName || budget.budgetType || 'Budget'}`, keywords: `${budget.id} ${budget.projectName} ${budget.budgetType}` })),
     [budgetOptions],
   )
 
@@ -706,8 +707,8 @@ export default function NewFRP() {
 
     try {
       // Cek ke database terlebih dahulu untuk mendapatkan sisa budget ter-update
-      console.log('[NewFRP] Fetching latest budgets from /api/frp/budgets')
-      const resBudgets = await fetch('/api/frp/budgets')
+      console.log('[NewFRP] Fetching latest budgets from /api/budgets')
+      const resBudgets = await fetch('/api/budgets')
       if (!resBudgets.ok) {
         throw new Error('Gagal memeriksa budget terbaru dari database. Silakan coba lagi.')
       }
