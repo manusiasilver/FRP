@@ -19,39 +19,98 @@ const formatDisplayDate = value => {
   }).format(date)
 }
 
-function buildPostForm(action, payload, target = '_self') {
-  const form = document.createElement('form')
-  form.method = 'POST'
-  form.action = action
-  form.target = target
-  form.style.display = 'none'
-  const append = (name, value) => {
-    const input = document.createElement('input')
-    input.type = 'hidden'; input.name = name; input.value = value ?? ''
-    form.appendChild(input)
-  }
-  Object.entries(payload || {}).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach((item, idx) => {
-        if (item && typeof item === 'object') Object.entries(item).forEach(([sk, sv]) => append(`${key}[${idx}][${sk}]`, sv))
-        else append(`${key}[]`, item)
-      })
-      return
+const getResponseMessage = async response => {
+  try {
+    const text = await response.text()
+    if (!text) return response.statusText || 'Request gagal.'
+
+    try {
+      const data = JSON.parse(text)
+      return data?.error || data?.message || text
+    } catch (_) {
+      return text
     }
-    append(key, value)
-  })
-  document.body.appendChild(form)
-  form.submit()
-  document.body.removeChild(form)
+  } catch (_) {
+    return response.statusText || 'Request gagal.'
+  }
 }
 
-function printPreview(payload) {
-  if (payload?.id) {
-    window.open(`/api/frp/${encodeURIComponent(payload.id)}/print`, '_blank')
+const fetchBlob = async (url, options = {}) => {
+  const response = await fetch(url, options)
+
+  if (!response.ok) {
+    throw new Error(await getResponseMessage(response))
+  }
+
+  return {
+    blob: await response.blob(),
+    disposition: response.headers.get('Content-Disposition') || '',
+  }
+}
+
+const buildPdfFileName = (payload, disposition = '') => {
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i)
+  if (match?.[1]) return decodeURIComponent(match[1])
+  return `${payload?.frpNo || 'FRP-DRAFT'}.pdf`
+}
+
+const openBlobInWindow = (targetWindow, blob) => {
+  const blobUrl = URL.createObjectURL(blob)
+
+  if (targetWindow) {
+    targetWindow.location.href = blobUrl
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
     return
   }
 
-  buildPostForm('/print-pdf', payload, '_blank')
+  window.open(blobUrl, '_blank')
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+}
+
+async function printPreview(payload) {
+  const printWindow = window.open('', '_blank')
+
+  try {
+    const url = payload?.id ? `/api/frp/${encodeURIComponent(payload.id)}/print` : '/print-pdf'
+    const options = payload?.id
+      ? {}
+      : {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload || {}),
+        }
+    const { blob } = await fetchBlob(url, options)
+
+    openBlobInWindow(printWindow, blob)
+  } catch (error) {
+    if (printWindow) printWindow.close()
+    window.alert(error.message || 'Gagal membuka preview print.')
+  }
+}
+
+async function downloadPdf(payload) {
+  try {
+    const url = payload?.id ? `/api/frp/${encodeURIComponent(payload.id)}/pdf` : '/generate-pdf'
+    const options = payload?.id
+      ? {}
+      : {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload || {}),
+        }
+    const { blob, disposition } = await fetchBlob(url, options)
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = blobUrl
+    link.download = buildPdfFileName(payload, disposition)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+  } catch (error) {
+    window.alert(error.message || 'Gagal download PDF.')
+  }
 }
 
 const fieldStyle = { width: '100%', padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }
@@ -389,13 +448,7 @@ function DialogFrpDetail({
             <button
               type="button"
               className="dashboard-popup__button"
-              onClick={() => {
-                if (request.id) {
-                  window.open(`/api/frp/${encodeURIComponent(request.id)}/pdf`, '_blank')
-                  return
-                }
-                buildPostForm('/generate-pdf', request, '_blank')
-              }}
+              onClick={() => downloadPdf(request)}
               style={{ 
                 display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: '115px',
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
