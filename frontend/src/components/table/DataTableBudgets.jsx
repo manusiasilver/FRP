@@ -14,7 +14,7 @@ const matchesSearch = (item, search) => {
   if (!search) return true
   const q = search.toLowerCase()
   return (
-    (item.id || '').toLowerCase().includes(q) ||
+    (item.id || '').toLowerCase().includes(q) ||  
     (item.departmentName || item.department || '').toLowerCase().includes(q) ||
     (item.projectName || item.description || '').toLowerCase().includes(q)
   )

@@ -32,6 +32,10 @@ const formatDecimalInput = v => {
 }
 
 const normalizeCompany = v => String(v || '').trim().toUpperCase()
+const hasFullBudgetAccess = dept => {
+  const values = [dept?.class, dept?.name, dept?.code, dept?.department_code]
+  return values.some(value => normalizeCompany(value) === 'IT')
+}
 const getBudgetRemainingValue = budget => {
   if (!budget) return 0
   if (budget.budget_remaining !== undefined) return Number(budget.budget_remaining || 0)
@@ -561,6 +565,7 @@ export default function NewFRP() {
     const scopedBudgets = targetCompany && companyBudgets.length > 0 ? companyBudgets : allBudgets
 
     return scopedBudgets.filter(b => {
+      if (hasFullBudgetAccess(selectedDept)) return true
       if (!selectedDept) return true
       const bDeptId = String(b.department_id ?? b.departmentId ?? '')
       const dId = String(selectedDept.originalIndex ?? selectedDept.id ?? '')
