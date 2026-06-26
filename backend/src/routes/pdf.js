@@ -144,8 +144,9 @@ router.get('/api/frp/:id/preview', checkAuth, async (req, res) => {
             return res.status(404).send('FRP not found');
         }
 
+        const autoPrint = req.query.autoPrint === '1' || req.query.autoPrint === 'true';
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.send(renderPdfDocument(data, true));
+        res.send(renderPdfDocument(data, true, { autoPrint }));
     } catch (error) {
         res.status(500).json({
             error: 'Failed to preview FRP PDF',

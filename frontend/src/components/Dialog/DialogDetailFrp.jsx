@@ -46,6 +46,30 @@ function buildPostForm(action, payload, target = '_self') {
 }
 
 function printPreview(payload) {
+  if (payload?.id) {
+    const iframe = document.createElement('iframe')
+    iframe.title = 'Print preview'
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    iframe.style.visibility = 'hidden'
+    iframe.src = `/api/frp/${encodeURIComponent(payload.id)}/preview?autoPrint=1`
+
+    document.body.appendChild(iframe)
+
+    const removeFrame = () => {
+      window.removeEventListener('afterprint', removeFrame)
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
+    }
+
+    window.addEventListener('afterprint', removeFrame)
+    window.setTimeout(removeFrame, 30000)
+    return
+  }
+
   const target = `print-frame-${Date.now()}`
   const iframe = document.createElement('iframe')
   iframe.name = target
@@ -405,7 +429,13 @@ function DialogFrpDetail({
             <button
               type="button"
               className="dashboard-popup__button"
-              onClick={() => buildPostForm('/generate-pdf', request, '_blank')}
+              onClick={() => {
+                if (request.id) {
+                  window.open(`/api/frp/${encodeURIComponent(request.id)}/pdf`, '_blank')
+                  return
+                }
+                buildPostForm('/generate-pdf', request, '_blank')
+              }}
               style={{ 
                 display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: '115px',
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
