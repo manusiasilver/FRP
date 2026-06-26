@@ -48,7 +48,7 @@ function parseAmount(value) {
   return parseInt(String(raw || '0').replace(/\./g, '').replace(/[^0-9]/g, ''), 10) || 0
 }
 
-function renderPdfDocument(formData = {}, preview = false) {
+function renderPdfDocument(formData = {}, preview = false, options = {}) {
   const items = normalizeItems(formData.items)
   const checkDocs = normalizeCheckDocs(formData.checkDocs)
   const tanggalFrp = firstValue(formData.tanggalFrp, formData.frpDate, formData.date)
@@ -91,6 +91,23 @@ function renderPdfDocument(formData = {}, preview = false) {
   }).join('')
 
   const generatedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  const autoPrintScript = preview && options.autoPrint ? `
+  <script>
+    (function () {
+      let printed = false;
+
+      function triggerPrint() {
+        if (printed) return;
+        printed = true;
+        window.focus();
+        window.print();
+      }
+
+      window.addEventListener('load', function () {
+        setTimeout(triggerPrint, 300);
+      });
+    })();
+  </script>` : ''
 
   return `<!DOCTYPE html>
 <html lang="id">
@@ -260,6 +277,7 @@ function renderPdfDocument(formData = {}, preview = false) {
       padding-top: 8px;
     }
   </style>
+  ${autoPrintScript}
 </head>
 <body>
 

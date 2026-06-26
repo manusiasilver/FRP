@@ -45,16 +45,29 @@ function buildPostForm(action, payload, target = '_self') {
   document.body.removeChild(form)
 }
 
-function openPrintPreview(payload) {
-  const target = `print-preview-${Date.now()}`
-  const printWindow = window.open('', target)
+function printPreview(payload) {
+  const target = `print-frame-${Date.now()}`
+  const iframe = document.createElement('iframe')
+  iframe.name = target
+  iframe.title = 'Print preview'
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  iframe.style.visibility = 'hidden'
 
-  if (!printWindow) {
-    buildPostForm('/preview', payload, '_blank')
-    return
+  document.body.appendChild(iframe)
+  buildPostForm('/preview', { ...payload, autoPrint: '1' }, target)
+
+  const removeFrame = () => {
+    window.removeEventListener('afterprint', removeFrame)
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
   }
 
-  buildPostForm('/preview', payload, target)
+  window.addEventListener('afterprint', removeFrame)
+  window.setTimeout(removeFrame, 30000)
 }
 
 const fieldStyle = { width: '100%', padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }
@@ -375,7 +388,7 @@ function DialogFrpDetail({
             <button
               type="button"
               className="dashboard-popup__button"
-              onClick={() => openPrintPreview(request)}
+              onClick={() => printPreview(request)}
               style={{ 
                 display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: '115px',
                 background: 'linear-gradient(135deg, #1a2a57 0%, #2d4a8c 100%)',
@@ -386,8 +399,8 @@ function DialogFrpDetail({
               onMouseOver={(e) => e.currentTarget.style.boxShadow = '0 12px 28px rgba(26, 42, 87, 0.4)'}
               onMouseOut={(e) => e.currentTarget.style.boxShadow = '0 8px 20px rgba(26, 42, 87, 0.28)'}
             >
-              <span className="material-icons-round" style={{ fontSize: '18px' }}>visibility</span>
-              Preview
+              <span className="material-icons-round" style={{ fontSize: '18px' }}>print</span>
+              Print
             </button>
             <button
               type="button"

@@ -108,8 +108,9 @@ router.get('/api/data/history', checkAuth, (req, res) => {
 
 // Preview from request body
 router.post('/preview', checkAuth, (req, res) => {
+    const autoPrint = req.body.autoPrint === '1' || req.body.autoPrint === 'true';
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(renderPdfDocument(req.body, true));
+    res.send(renderPdfDocument(req.body, true, { autoPrint }));
 });
 
 // Generate from request body
