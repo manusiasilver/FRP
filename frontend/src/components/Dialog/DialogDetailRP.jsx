@@ -104,9 +104,68 @@ const metaChipStyle = {
   maxWidth: '100%',
 }
 
-const printRpPdf = rpId => {
+const getResponseMessage = async response => {
+  try {
+    const text = await response.text()
+    if (!text) return response.statusText || 'Request gagal.'
+
+    try {
+      const data = JSON.parse(text)
+      return data?.error || data?.message || text
+    } catch (_) {
+      return text
+    }
+  } catch (_) {
+    return response.statusText || 'Request gagal.'
+  }
+}
+
+const fetchBlob = async (url, options = {}) => {
+  const response = await fetch(url, options)
+
+  if (!response.ok) {
+    throw new Error(await getResponseMessage(response))
+  }
+
+  return await response.blob()
+}
+
+const openBlobInWindow = (targetWindow, blob) => {
+  const blobUrl = URL.createObjectURL(blob)
+
+  if (targetWindow) {
+    targetWindow.location.href = blobUrl
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+    return
+  }
+
+  window.open(blobUrl, '_blank')
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+}
+
+const previewRpPdf = async rpId => {
   if (!rpId || typeof window === 'undefined') return
-  window.open(`/api/rp/${rpId}/print`, '_blank')
+
+  try {
+    const blob = await fetchBlob(`/api/rp/${encodeURIComponent(rpId)}/pdf`)
+    openBlobInWindow(null, blob)
+  } catch (error) {
+    window.alert(error.message || 'Gagal membuka preview PDF.')
+  }
+}
+
+const printRpPdf = async rpId => {
+  if (!rpId || typeof window === 'undefined') return
+
+  const printWindow = window.open('', '_blank')
+
+  try {
+    const blob = await fetchBlob(`/api/rp/${encodeURIComponent(rpId)}/print`)
+    openBlobInWindow(printWindow, blob)
+  } catch (error) {
+    if (printWindow) printWindow.close()
+    window.alert(error.message || 'Gagal membuka print PDF.')
+  }
 }
 
 function DialogDetailRP({
@@ -437,7 +496,7 @@ function DialogDetailRP({
               <button
                 type="button"
                 className="dashboard-popup__button btn-dialog btn-dialog-preview"
-                onClick={() => window.open(`/api/rp/${request.id}/pdf`, '_blank')}
+                onClick={() => previewRpPdf(request.id)}
               >
                 <span className="material-icons-round" style={{ fontSize: '18px' }}>visibility</span>
                 Preview
