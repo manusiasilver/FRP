@@ -40,10 +40,11 @@ function buildPostForm(action, payload, target = '_self') {
 }
 
 function openPrintPreview(payload) {
-  const target = `print-preview-${Date.now()}`
-  const printWindow = window.open('', target)
-  if (!printWindow) { buildPostForm('/preview', payload, '_blank'); return }
-  buildPostForm('/preview', payload, target)
+  if (payload?.id) {
+    window.open(`/api/frp/${encodeURIComponent(payload.id)}/print`, '_blank')
+    return
+  }
+  buildPostForm('/print-pdf', payload, '_blank')
 }
 
 /* ── style tokens ── */

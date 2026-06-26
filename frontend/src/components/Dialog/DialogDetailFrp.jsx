@@ -47,51 +47,11 @@ function buildPostForm(action, payload, target = '_self') {
 
 function printPreview(payload) {
   if (payload?.id) {
-    const iframe = document.createElement('iframe')
-    iframe.title = 'Print preview'
-    iframe.style.position = 'fixed'
-    iframe.style.right = '0'
-    iframe.style.bottom = '0'
-    iframe.style.width = '0'
-    iframe.style.height = '0'
-    iframe.style.border = '0'
-    iframe.style.visibility = 'hidden'
-    iframe.src = `/api/frp/${encodeURIComponent(payload.id)}/preview?autoPrint=1`
-
-    document.body.appendChild(iframe)
-
-    const removeFrame = () => {
-      window.removeEventListener('afterprint', removeFrame)
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
-    }
-
-    window.addEventListener('afterprint', removeFrame)
-    window.setTimeout(removeFrame, 30000)
+    window.open(`/api/frp/${encodeURIComponent(payload.id)}/print`, '_blank')
     return
   }
 
-  const target = `print-frame-${Date.now()}`
-  const iframe = document.createElement('iframe')
-  iframe.name = target
-  iframe.title = 'Print preview'
-  iframe.style.position = 'fixed'
-  iframe.style.right = '0'
-  iframe.style.bottom = '0'
-  iframe.style.width = '0'
-  iframe.style.height = '0'
-  iframe.style.border = '0'
-  iframe.style.visibility = 'hidden'
-
-  document.body.appendChild(iframe)
-  buildPostForm('/preview', { ...payload, autoPrint: '1' }, target)
-
-  const removeFrame = () => {
-    window.removeEventListener('afterprint', removeFrame)
-    if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
-  }
-
-  window.addEventListener('afterprint', removeFrame)
-  window.setTimeout(removeFrame, 30000)
+  buildPostForm('/print-pdf', payload, '_blank')
 }
 
 const fieldStyle = { width: '100%', padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }

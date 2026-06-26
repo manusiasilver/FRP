@@ -106,13 +106,6 @@ router.get('/api/data/history', checkAuth, (req, res) => {
 // FRP PDF
 // ============================================================
 
-// Preview from request body
-router.post('/preview', checkAuth, (req, res) => {
-    const autoPrint = req.body.autoPrint === '1' || req.body.autoPrint === 'true';
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(renderPdfDocument(req.body, true, { autoPrint }));
-});
-
 // Generate from request body
 router.post('/generate-pdf', checkAuth, async (req, res) => {
     try {
@@ -135,8 +128,14 @@ router.post('/generate-pdf', checkAuth, async (req, res) => {
     }
 });
 
-// Preview from saved FRP
-router.get('/api/frp/:id/preview', checkAuth, async (req, res) => {
+// Print from request body
+router.post('/print-pdf', checkAuth, (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(renderPdfDocument(req.body, true, { autoPrint: true }));
+});
+
+// Print from saved FRP
+router.get('/api/frp/:id/print', checkAuth, async (req, res) => {
     try {
         const data = (await fetchAllFrpRequests()).find(r => r.id === req.params.id);
 
@@ -144,12 +143,11 @@ router.get('/api/frp/:id/preview', checkAuth, async (req, res) => {
             return res.status(404).send('FRP not found');
         }
 
-        const autoPrint = req.query.autoPrint === '1' || req.query.autoPrint === 'true';
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.send(renderPdfDocument(data, true, { autoPrint }));
+        res.send(renderPdfDocument(data, true, { autoPrint: true }));
     } catch (error) {
         res.status(500).json({
-            error: 'Failed to preview FRP PDF',
+            error: 'Failed to print FRP PDF',
             details: error.message,
         });
     }
@@ -186,7 +184,7 @@ router.get('/api/frp/:id/pdf', checkAuth, async (req, res) => {
 // RP PDF
 // ============================================================
 
-router.get('/api/rp/:id/preview', checkAuth, async (req, res) => {
+router.get('/api/rp/:id/print', checkAuth, async (req, res) => {
     try {
         const data = (await fetchAllRpRequests()).find(r => r.id === req.params.id);
 
@@ -198,7 +196,7 @@ router.get('/api/rp/:id/preview', checkAuth, async (req, res) => {
         res.send(renderRpPdfDocument(data, true));
     } catch (error) {
         res.status(500).json({
-            error: 'Failed to preview RP PDF',
+            error: 'Failed to print RP PDF',
             details: error.message,
         });
     }

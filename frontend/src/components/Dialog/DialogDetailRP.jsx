@@ -104,9 +104,9 @@ const metaChipStyle = {
   maxWidth: '100%',
 }
 
-const printRpPreview = rpId => {
+const printRpPdf = rpId => {
   if (!rpId || typeof window === 'undefined') return
-  window.open(`/api/rp/${rpId}/preview`, '_blank')
+  window.open(`/api/rp/${rpId}/print`, '_blank')
 }
 
 function DialogDetailRP({
@@ -437,7 +437,7 @@ function DialogDetailRP({
               <button
                 type="button"
                 className="dashboard-popup__button btn-dialog btn-dialog-preview"
-                onClick={() => window.open(`/api/rp/${request.id}/preview`, '_blank')}
+                onClick={() => window.open(`/api/rp/${request.id}/pdf`, '_blank')}
               >
                 <span className="material-icons-round" style={{ fontSize: '18px' }}>visibility</span>
                 Preview
@@ -446,7 +446,7 @@ function DialogDetailRP({
               <button
                 type="button"
                 className="dashboard-popup__button btn-dialog btn-dialog-print"
-                onClick={() => printRpPreview(request.id)}
+                onClick={() => printRpPdf(request.id)}
               >
                 <span className="material-icons-round" style={{ fontSize: '18px' }}>print</span>
                 Print PDF

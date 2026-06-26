@@ -70,11 +70,11 @@
 |--------|----------|------|
 | GET | `/history` | PDF history page |
 | GET | `/api/data/history` | Get PDF history data |
-| POST | `/preview` | Preview PDF |
 | POST | `/generate-pdf` | Generate PDF |
-| GET | `/api/frp/:id/preview` | Preview FRP PDF |
+| POST | `/print-pdf` | Print FRP PDF from request body |
+| GET | `/api/frp/:id/print` | Print FRP PDF |
 | GET | `/api/frp/:id/pdf` | Get FRP PDF |
-| GET | `/api/rp/:id/preview` | Preview RP PDF |
+| GET | `/api/rp/:id/print` | Print RP PDF |
 | GET | `/api/rp/:id/pdf` | Get RP PDF |
 
 ## Laporan Routes (`/laporan.js`)

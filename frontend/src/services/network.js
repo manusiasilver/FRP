@@ -2,7 +2,7 @@ import axios from 'axios'
 import { getAuthUser, getToken } from '../utils/auth'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
-const API_PATH_PREFIXES = ['/api/', '/logout', '/generate-pdf', '/preview', '/pdfs']
+const API_PATH_PREFIXES = ['/api/', '/logout', '/generate-pdf', '/print-pdf', '/pdfs']
 
 export function resolveApiUrl(input) {
   if (typeof input !== 'string') return input

@@ -181,9 +181,9 @@ const adjustCounts = (counts = {}, fromStatus, toStatus) => {
   }
 }
 
-const printRpPreview = rpId => {
+const printRpPdf = rpId => {
   if (!rpId || typeof window === 'undefined') return
-  window.open(`/api/rp/${rpId}/preview`, '_blank')
+  window.open(`/api/rp/${rpId}/print`, '_blank')
 }
 
 const getUserJobLevelRank = user => {
@@ -820,11 +820,11 @@ export default function RpApprovalPage() {
           <div className="dashboard-popup__actions" style={{ position: 'relative', zIndex: 1, padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', borderRadius: '0 0 24px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {['approved', 'CREATED_FRP'].includes(selected.status) && (
               <>
-                <button type="button" onClick={() => window.open(`/api/rp/${selected.id}/preview`, '_blank')} className="btn-dialog btn-dialog-neutral">
+                <button type="button" onClick={() => window.open(`/api/rp/${selected.id}/pdf`, '_blank')} className="btn-dialog btn-dialog-neutral">
                   <span className="material-icons-round" style={{ fontSize: '18px' }}>visibility</span>
                   Preview
                 </button>
-                <button type="button" onClick={() => printRpPreview(selected.id)} className="btn-dialog btn-dialog-neutral">
+                <button type="button" onClick={() => printRpPdf(selected.id)} className="btn-dialog btn-dialog-neutral">
                   <span className="material-icons-round" style={{ fontSize: '18px' }}>print</span>
                   Print PDF
                 </button>

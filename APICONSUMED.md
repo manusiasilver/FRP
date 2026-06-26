@@ -92,10 +92,10 @@
   - [Laporan FRP](#laporan-frp)
   - [Laporan RP](#laporan-rp)
 - [8. PDF](#8-pdf)
-  - [Preview FRP PDF](#preview-frp-pdf)
   - [Generate FRP PDF](#generate-frp-pdf)
-  - [Preview RP PDF](#preview-rp-pdf)
+  - [Print FRP PDF](#print-frp-pdf)
   - [Generate RP PDF](#generate-rp-pdf)
+  - [Print RP PDF](#print-rp-pdf)
 - [9. Notes untuk FE](#9-notes-untuk-fe)
   - [Field naming](#field-naming)
     - [FRP field utama](#frp-field-utama)
@@ -1028,16 +1028,6 @@ GET /api/data/laporan-rp
 
 # 8. PDF
 
-## Preview FRP PDF
-
-```http
-POST /preview
-```
-
-Body mengikuti data FRP yang ingin dipreview.
-
----
-
 ## Gefrrate FRP PDF
 
 ```http
@@ -1048,10 +1038,11 @@ Body mengikuti data FRP yang ingin digenerate.
 
 ---
 
-## Preview RP PDF
+## Print FRP PDF
 
 ```http
-GET /api/rp/:id/preview
+POST /print-pdf
+GET /api/frp/:id/print
 ```
 
 ---
@@ -1060,6 +1051,14 @@ GET /api/rp/:id/preview
 
 ```http
 GET /api/rp/:id/pdf
+```
+
+---
+
+## Print RP PDF
+
+```http
+GET /api/rp/:id/print
 ```
 
 ---

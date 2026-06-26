@@ -5,9 +5,9 @@ import ButtonKeFrp from './ButtonKeFrp.jsx'
 import ButtonAccessManagerRp from './ButtonAccessManagerRp.jsx'
 import ButtonAccessStaffRp from './ButtonAccessStaffRp.jsx'
 
-function printRpPreview(rpId) {
+function printRpPdf(rpId) {
   if (!rpId || typeof window === 'undefined') return
-  window.open(`/api/rp/${rpId}/preview`, '_blank')
+  window.open(`/api/rp/${rpId}/print`, '_blank')
 }
 
 export default function ButtonActionApprovalRp({
@@ -61,7 +61,7 @@ export default function ButtonActionApprovalRp({
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
         }}>
           {showPreview && ['approved', 'CREATED_FRP'].includes(rp.status) && (
-            <ButtonPrintPdf onClick={() => printRpPreview(rp.id)}>Print PDF</ButtonPrintPdf>
+            <ButtonPrintPdf onClick={() => printRpPdf(rp.id)}>Print PDF</ButtonPrintPdf>
           )}
           {canCreateFrp && showKeFrp && (
             <ButtonKeFrp onClick={() => navigate(`/frp?fromRp=${rp.id}`)}>FRP</ButtonKeFrp>

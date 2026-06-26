@@ -48,13 +48,11 @@ function buildPostForm(action, payload, target = '_self') {
 }
 
 function openPrintPreview(payload) {
-  const target = `print-preview-${Date.now()}`
-  const printWindow = window.open('', target)
-  if (!printWindow) {
-    buildPostForm('/preview', payload, '_blank')
+  if (payload?.id) {
+    window.open(`/api/frp/${encodeURIComponent(payload.id)}/print`, '_blank')
     return
   }
-  buildPostForm('/preview', payload, target)
+  buildPostForm('/print-pdf', payload, '_blank')
 }
 
 const fieldStyle = { width: '100%', padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', fontSize: '0.85rem', boxSizing: 'border-box', fontFamily: 'inherit' }

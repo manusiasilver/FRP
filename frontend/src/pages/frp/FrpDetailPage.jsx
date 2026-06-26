@@ -47,15 +47,12 @@ function buildPostForm(action, payload, target = '_self') {
 }
 
 function openPrintPreview(payload) {
-  const target = `print-preview-${Date.now()}`
-  const printWindow = window.open('', target)
-
-  if (!printWindow) {
-    buildPostForm('/preview', payload, '_blank')
+  if (payload?.id) {
+    window.open(`/api/frp/${encodeURIComponent(payload.id)}/print`, '_blank')
     return
   }
 
-  buildPostForm('/preview', payload, target)
+  buildPostForm('/print-pdf', payload, '_blank')
 }
 
 export default function FrpDetailPage() {
