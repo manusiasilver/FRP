@@ -32,6 +32,16 @@ function normalizeField(value) {
   return value ?? ''
 }
 
+function firstValue(...values) {
+  for (const value of values) {
+    const normalized = normalizeField(value)
+    if (normalized !== undefined && normalized !== null && String(normalized).trim() !== '') {
+      return normalized
+    }
+  }
+  return ''
+}
+
 function parseAmount(value) {
   // Handle array (duplicate form keys merged by qs) — take first valid amount
   const raw = Array.isArray(value) ? value[0] : value
@@ -41,9 +51,17 @@ function parseAmount(value) {
 function renderPdfDocument(formData = {}, preview = false) {
   const items = normalizeItems(formData.items)
   const checkDocs = normalizeCheckDocs(formData.checkDocs)
-  const keteranganFrp = Array.isArray(formData.keteranganFrp)
-    ? formData.keteranganFrp.join(' ')
-    : String(formData.keteranganFrp ?? '')
+  const tanggalFrp = firstValue(formData.tanggalFrp, formData.frpDate, formData.date)
+  const divisi = firstValue(formData.divisi, formData.division, formData.departmentClass, formData.departmentName)
+  const dimintaOleh = firstValue(formData.dimintaOleh, formData.requesterName, formData.requestedBy, formData.createdBy)
+  const keteranganFrpRaw = firstValue(formData.keteranganFrp, formData.frpDescription, formData.frp_description, formData.description)
+  const keteranganFrp = Array.isArray(keteranganFrpRaw)
+    ? keteranganFrpRaw.join(' ')
+    : String(keteranganFrpRaw ?? '')
+  const extDocType = firstValue(formData.extDocType, formData.externalDocumentType, formData.ext_doc_type)
+  const extDocNumber = firstValue(formData.extDocNumber, formData.externalDocumentNumber, formData.ext_doc_number)
+  const bankTujuan = firstValue(formData.bankTujuan, formData.destinationBank, formData.destination_bank)
+  const rekBankTujuan = firstValue(formData.rekBankTujuan, formData.destinationBankAccount, formData.destination_bank_account)
   const totalAmount = items.reduce((sum, item) => sum + parseAmount(item.amount), 0)
 
   const allDocs = [
@@ -266,18 +284,18 @@ function renderPdfDocument(formData = {}, preview = false) {
     <div class="info-col">
       <table class="info-table">
         <tr><td class="lbl">Vendor</td><td class="sep">:</td><td>${escapeHtml(formData.vendor || '-')}</td></tr>
-        <tr><td class="lbl">Tanggal FRP</td><td class="sep">:</td><td>${escapeHtml(formData.tanggalFrp || '-')}</td></tr>
+        <tr><td class="lbl">Tanggal FRP</td><td class="sep">:</td><td>${escapeHtml(tanggalFrp || '-')}</td></tr>
         <tr><td class="lbl">Company Name</td><td class="sep">:</td><td>${escapeHtml(formData.companyName || '-')}</td></tr>
-        <tr><td class="lbl">Divisi</td><td class="sep">:</td><td>${escapeHtml(formData.divisi || '-')}</td></tr>
-        <tr><td class="lbl">Diminta Oleh</td><td class="sep">:</td><td>${escapeHtml(formData.dimintaOleh || '-')}</td></tr>
+        <tr><td class="lbl">Divisi</td><td class="sep">:</td><td>${escapeHtml(divisi || '-')}</td></tr>
+        <tr><td class="lbl">Diminta Oleh</td><td class="sep">:</td><td>${escapeHtml(dimintaOleh || '-')}</td></tr>
         ${formData.rpReference ? `<tr><td class="lbl" style="color: #1e3a8a; font-weight: 700;">Referensi RP No</td><td class="sep" style="color: #1e3a8a; font-weight: 700;">:</td><td style="color: #1e3a8a; font-weight: 700;">${escapeHtml(formData.rpReference)}</td></tr>` : ''}
       </table>
     </div>
     <div class="info-col">
       <table class="info-table">
         <tr><td class="lbl">Internal PO No</td><td class="sep">:</td><td>${escapeHtml(formData.internalPoNumber || '-')}</td></tr>
-        <tr><td class="lbl">Ext Doc Type</td><td class="sep">:</td><td>${escapeHtml(formData.extDocType || '-')}</td></tr>
-        <tr><td class="lbl">Ext Doc Number</td><td class="sep">:</td><td>${escapeHtml(formData.extDocNumber || '-')}</td></tr>
+        <tr><td class="lbl">Ext Doc Type</td><td class="sep">:</td><td>${escapeHtml(extDocType || '-')}</td></tr>
+        <tr><td class="lbl">Ext Doc Number</td><td class="sep">:</td><td>${escapeHtml(extDocNumber || '-')}</td></tr>
         <tr><td class="lbl">Payment Method</td><td class="sep">:</td><td>${escapeHtml(formData.paymentMethod || '-')}</td></tr>
         <tr><td class="lbl">Payment Date</td><td class="sep">:</td><td>${escapeHtml(formData.paymentDate || '-')}</td></tr>
       </table>
@@ -287,11 +305,11 @@ function renderPdfDocument(formData = {}, preview = false) {
   <div class="bank-row">
     <div>
       <div class="bank-lbl">Bank Tujuan</div>
-      <div class="bank-val">${escapeHtml(formData.bankTujuan || '-')}</div>
+      <div class="bank-val">${escapeHtml(bankTujuan || '-')}</div>
     </div>
     <div style="margin-left:auto;text-align:right;">
       <div class="bank-lbl">Nomor Rekening</div>
-      <div class="bank-val" style="font-family:monospace;">${escapeHtml(formData.rekBankTujuan || '-')}</div>
+      <div class="bank-val" style="font-family:monospace;">${escapeHtml(rekBankTujuan || '-')}</div>
     </div>
   </div>
 
@@ -335,7 +353,7 @@ function renderPdfDocument(formData = {}, preview = false) {
         </thead>
         <tbody>
           <tr style="border-bottom: 1px solid #000;">
-            <td style="padding: 14px 10px 4px; font-weight: 700; color: #000; border-right: 1px solid #000;">${escapeHtml(formData.dimintaOleh || formData.createdBy || '-')}</td>
+            <td style="padding: 14px 10px 4px; font-weight: 700; color: #000; border-right: 1px solid #000;">${escapeHtml(dimintaOleh || '-')}</td>
             <td style="padding: 14px 10px 4px; font-weight: 700; color: #000;">${escapeHtml(formData.approvedBy || formData.approvedByActual || '-')}</td>
           </tr>
           <tr>

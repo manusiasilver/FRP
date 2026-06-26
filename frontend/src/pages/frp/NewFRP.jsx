@@ -36,6 +36,32 @@ const hasFullBudgetAccess = dept => {
   const values = [dept?.class, dept?.name, dept?.code, dept?.department_code]
   return values.some(value => normalizeCompany(value) === 'IT')
 }
+const isITUser = user => {
+  const directValues = [
+    user?.role,
+    user?.selectedRole,
+    user?.department,
+    user?.selectedDivision,
+    user?.departmentClass,
+    user?.departmentName,
+  ]
+
+  if (directValues.some(value => normalizeCompany(value) === 'IT')) return true
+
+  const assignmentValues = [
+    ...(Array.isArray(user?.companies) ? user.companies : []),
+    ...(Array.isArray(user?.departments) ? user.departments : []),
+  ].flatMap(item => [
+    item?.class,
+    item?.dept_class,
+    item?.departmentClass,
+    item?.name,
+    item?.deptName,
+    item?.departmentName,
+  ])
+
+  return assignmentValues.some(value => normalizeCompany(value) === 'IT')
+}
 const getBudgetRemainingValue = budget => {
   if (!budget) return 0
   if (budget.budget_remaining !== undefined) return Number(budget.budget_remaining || 0)
@@ -533,7 +559,8 @@ export default function NewFRP() {
     () => departments.map(d => ({ value: getDepartmentValue(d), label: d.label })),
     [departments],
   )
-  const canChangeDivision = activeUser?.role === 'administrator' || divisionSelectOptions.length > 1
+  const canCreateForOtherDivision = isITUser(activeUser)
+  const canChangeDivision = activeUser?.role === 'administrator' || canCreateForOtherDivision || divisionSelectOptions.length > 1
 
   // Backend sudah scoping employees — filter by company + class saja
   const filteredEmployees = useMemo(() => {
@@ -542,7 +569,7 @@ export default function NewFRP() {
       return [{ fullName: getDisplayName(activeUser), companies: [{ name: activeUser?.selectedCompany || '', class: activeUser?.selectedDivision || '' }] }]
     }
     const targetCompany = normalizeCompany(values.companyName)
-    const selectedDept = departments.find(d => String(d.originalIndex) === String(values.divisi))
+    const selectedDept = findDepartmentByValue(departments, values.divisi)
     const targetClass = normalizeCompany(selectedDept?.class || '')
     return source.filter(e =>
       getEmployeeAssignments(e).some(a => {
@@ -556,7 +583,7 @@ export default function NewFRP() {
   // Backend sudah filter budget berdasarkan scope user
   // Frontend hanya filter by company + selected department
   const budgetOptions = useMemo(() => {
-    const selectedDept = departments.find(d => String(d.originalIndex) === String(values.divisi))
+    const selectedDept = findDepartmentByValue(departments, values.divisi)
     const targetCompany = normalizeCompany(values.companyName)
     const allBudgets = FRP.budgets || []
     const companyBudgets = targetCompany
@@ -938,7 +965,26 @@ export default function NewFRP() {
               </div>
               <div className="frp-grid-3" style={{ marginTop: "20px", gridTemplateColumns: (!isMobile && !isTablet) ? 'minmax(0, 1.8fr) minmax(0, 1.2fr) 170px' : undefined }}>
                 <FloatingGroup label="Division & Class">
-                  <input className="frp-input-readonly" value={departments.find(d => String(d.originalIndex) === String(values.divisi))?.label || values.kelas || values.divisi} readOnly />
+                  {canChangeDivision ? (
+                    <SearchableSelect
+                      name="divisi"
+                      value={values.divisi}
+                      onChange={selectedValue => {
+                        const selectedDept = findDepartmentByValue(departments, selectedValue)
+                        setValues(prev => ({
+                          ...prev,
+                          divisi: selectedValue,
+                          kelas: selectedDept?.class || '',
+                        }))
+                      }}
+                      options={divisionSelectOptions}
+                      placeholder="Select division..."
+                      className="frp-select"
+                      menuPosition="fixed"
+                    />
+                  ) : (
+                    <input className="frp-input-readonly" value={findDepartmentByValue(departments, values.divisi)?.label || values.kelas || values.divisi} readOnly />
+                  )}
                 </FloatingGroup>
                 <FloatingGroup label="Request by">
                   <input className="frp-input-readonly" value={values.dimintaOleh} readOnly />
