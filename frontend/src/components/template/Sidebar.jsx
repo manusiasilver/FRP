@@ -313,7 +313,6 @@ function Sidebar({
   const uniqueCompanies = [...new Set((resolvedAssignments || []).map(a => a.name))]
   const showChangeAccess = canChangeAccess || (resolvedAssignments || []).length > 1
   const backUrl = changeAccessHref || (uniqueCompanies.length > 1 ? '/select-company' : '/select-division')
-  const rpApprovalHref = '/rp-approval'
   const normalizedRole = normalizeText(resolvedUserRole)
   const normalizedJobLevel = normalizeText(resolvedUserJobLevel)
   const assignmentDivisions = useMemo(
@@ -345,68 +344,13 @@ function Sidebar({
 
   const primaryItems = useMemo(() => {
     const rawItems = hideMenu ? [] : [
-      {
-        label: 'Dashboard',
-        href: '/dashboard',
-        icon: 'space_dashboard',
-        auth: { roles: ['administrator'] },
-      },
-      {
-        label: 'FRP',
-        icon: 'receipt_long',
-        auth: { allow: 'all' },
-        children: [
-          { label: 'New FRP', href: '/frp', icon: 'note_add', auth: { allow: 'all' } },
-          { label: 'Approval FRP', href: '/approval', icon: 'fact_check', auth: { allow: 'all' } },
-          { label: 'Status FRP', href: '/approved', icon: 'task_alt', auth: { allow: 'all' } },
-        ],
-      },
-      {
-        label: 'RP',
-        icon: 'shopping_bag',
-        auth: { allow: 'all' },
-        children: [
-          { label: 'New RP', href: '/rp', icon: 'note_add', auth: { allow: 'all' } },
-          { label: 'Approval RP', href: rpApprovalHref, icon: 'rule', auth: { allow: 'all' } },
-        ],
-      },
-      {
-        label: 'Document',
-        icon: 'description',
-        auth: { allow: 'all' },
-        children: [
-          { label: 'Generate Document', href: '/document/generate', icon: 'note_add', auth: { allow: 'all' } },
-          { label: 'Riwayat Document', href: '/document/riwayat', icon: 'history', auth: { allow: 'all' } },
-          { label: 'Kelola Template', href: '/document/template', icon: 'folder_open', auth: { allow: 'all' } },
-        ],
-      },
-      {
-        label: 'Report',
-        icon: 'analytics',
-        auth: {
-          any: [
-            { roles: ['administrator'] },
-            { divisions: ['IT'] },
-          ],
-        },
-        children: [
-          { label: 'Report FRP', href: '/laporan-frp', icon: 'receipt_long', auth: { any: [{ roles: ['administrator'] }, { divisions: ['IT'] }] } },
-          { label: 'Report RP', href: '/laporan-rp', icon: 'shopping_bag', auth: { any: [{ roles: ['administrator'] }, { divisions: ['IT'] }] } },
-        ],
-      },
-      {
-        label: 'Master Data',
-        icon: 'dns',
-        auth: { roles: ['administrator'] },
-        children: [
-          { label: 'Vendor', href: '/admin/vendors', icon: 'storefront', auth: { roles: ['administrator'] } },
-          { label: 'Anggaran', href: '/admin/budgets', icon: 'account_balance', auth: { roles: ['administrator'] } },
-        ],
-      },
+      { label: 'Generate Document', href: '/document/generate', icon: 'note_add', auth: { allow: 'all' } },
+      { label: 'Riwayat Document', href: '/document/riwayat', icon: 'history', auth: { allow: 'all' } },
+      { label: 'Kelola Template', href: '/document/template', icon: 'folder_open', auth: { allow: 'all' } },
     ]
 
     return filterMenuItems(rawItems, authContext)
-  }, [authContext, hideMenu, rpApprovalHref])
+  }, [authContext, hideMenu])
 
   const secondaryItems = useMemo(() => {
     const rawItems = [
