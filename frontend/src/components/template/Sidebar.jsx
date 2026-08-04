@@ -292,7 +292,7 @@ function Sidebar({
       cancelled = true
     }
   }, [])
-
+//  TESTINGG
   // Prefer the latest user state from props so access changes update the sidebar immediately.
   const resolvedUserName = userName || sessionUserInfo?.name || sessionUserInfo?.fullName || sessionUserInfo?.username || 'User'
   const resolvedUserDivision = userDivision || sessionUserInfo?.selectedDivision || sessionUserInfo?.department || ''
