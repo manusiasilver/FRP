@@ -64,14 +64,17 @@ jobs:
       # 6. Pull latest code on VM
       # -------------------------
       - name: Pull latest code on VM
+        env:
+          REPO_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
             set -e
             cd /var/www/papertrail
 
             echo '>> Sync latest code'
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch '$REPO_URL' main
+            git reset --hard FETCH_HEAD
+            git remote set-url origin https://github.com/${{ github.repository }}.git
             git clean -fd -e backend/.env -e backend/credentials/
           "
       # -------------------------
