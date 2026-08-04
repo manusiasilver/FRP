@@ -96,7 +96,7 @@ function AppRoutes() {
       <Route element={<DashboardLayout />}>
         <Route path="/select-company" element={<SelectCompanyPage />} />
         <Route path="/select-division" element={<SelectDivisionPage />} />
-        <Route path="/" element={<NewFRP />} />
+        <Route path="/" element={<DocumentPage view="form" />} />
         <Route path="/frp" element={<NewFRP />} />
         <Route path="/approval" element={<ApprovalPage />} />
         <Route path="/approved" element={<ApprovalPage />} />
