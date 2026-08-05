@@ -4,7 +4,8 @@ import { RefreshCw, X, Copy, Edit, Download, Link, FileText, ChevronLeft, Chevro
 import { token, Btn, card, Inp, badgeStyles, Field, Sel, Divider } from './SharedUI';
 
 const MOBILE_BP = 768;
-const formatDate = v => { if (!v) return '-'; try { return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(v + 'T00:00:00')); } catch { return v; } };
+// doc_date arrives either as "YYYY-MM-DD" or a full ISO datetime (API serializes the DB's DATE column via toISOString at UTC midnight) — read the calendar date back out in UTC so both shapes land on the same day regardless of the browser's local timezone
+const formatDate = v => { if (!v) return '-'; try { const d = new Date(v); if (isNaN(d)) return v; return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(d); } catch { return v; } };
 // doc_date is date-only (always midnight); created_at is the only field carrying real time-of-day
 const formatTime = v => { if (!v) return null; try { return new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).format(new Date(v)) + ' WIB'; } catch { return null; } };
 const dash = v => v || '-';
@@ -136,44 +137,46 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
 
         {/* Filter Bar */}
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-end', gap: isMobile ? '0.8rem' : '0.85rem', marginBottom: '1rem', justifyContent: 'space-between', padding: isMobile ? '1rem' : '0.85rem 1rem', background: '#ffffff', borderRadius: '1rem', border: '1px solid rgba(26,42,87,0.08)', boxShadow: '0 4px 15px rgba(15,23,42,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'flex-end', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap', gap: isMobile ? '0.8rem' : '0.85rem', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'flex-end', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.8rem' : '0.85rem', flex: 1 }}>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: token.blue, height: '2.25rem', flexShrink: 0 }}>
               <SlidersHorizontal size={15} />
               <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Filter</span>
             </div>
 
-            <FilterField label="Cari" width={isMobile ? '100%' : '190px'}>
-              <input type="search" value={searchTerm} placeholder="No. dokumen, judul..." onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ ...filterCtrlStyle, transition: 'border-color 0.2s' }} />
-            </FilterField>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: isMobile ? '0.6rem' : '0.85rem', flex: 1, width: '100%' }}>
+              <FilterField label="Cari" width={isMobile ? '100%' : '190px'}>
+                <input type="search" value={searchTerm} placeholder="No. dokumen, judul..." onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ ...filterCtrlStyle, transition: 'border-color 0.2s' }} />
+              </FilterField>
 
-            <FilterField label="Perusahaan" width={isMobile ? 'calc(50% - 0.4rem)' : '120px'}>
-              <select value={searchCompany} onChange={e => { setSearchCompany(e.target.value); setCurrentPage(1); }} style={filterSelStyle}>
-                <option value="">Semua</option>
-                {companyOptions.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </FilterField>
+              <FilterField label="Perusahaan" width={isMobile ? 'calc(50% - 0.3rem)' : '120px'}>
+                <select value={searchCompany} onChange={e => { setSearchCompany(e.target.value); setCurrentPage(1); }} style={filterSelStyle}>
+                  <option value="">Semua</option>
+                  {companyOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </FilterField>
 
-            <FilterField label="Divisi" width={isMobile ? 'calc(50% - 0.4rem)' : '150px'}>
-              <select value={searchDivision} onChange={e => { setSearchDivision(e.target.value); setCurrentPage(1); }} style={filterSelStyle}>
-                <option value="">Semua</option>
-                {divisionOptions.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </FilterField>
+              <FilterField label="Divisi" width={isMobile ? 'calc(50% - 0.3rem)' : '150px'}>
+                <select value={searchDivision} onChange={e => { setSearchDivision(e.target.value); setCurrentPage(1); }} style={filterSelStyle}>
+                  <option value="">Semua</option>
+                  {divisionOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </FilterField>
 
-            <FilterField label="Tipe" width={isMobile ? 'calc(50% - 0.4rem)' : '120px'}>
-              <select value={searchIntExt} onChange={e => { setSearchIntExt(e.target.value); setCurrentPage(1); }} style={filterSelStyle}>
-                <option value="">Semua</option><option value="Internal">Internal</option><option value="External">External</option>
-              </select>
-            </FilterField>
+              <FilterField label="Tipe" width={isMobile ? 'calc(50% - 0.3rem)' : '120px'}>
+                <select value={searchIntExt} onChange={e => { setSearchIntExt(e.target.value); setCurrentPage(1); }} style={filterSelStyle}>
+                  <option value="">Semua</option><option value="Internal">Internal</option><option value="External">External</option>
+                </select>
+              </FilterField>
 
-            <FilterField label="Tanggal" width={isMobile ? 'calc(50% - 0.4rem)' : '145px'}>
-              <input type="date" value={searchDate} onChange={e => { setSearchDate(e.target.value); setCurrentPage(1); }} style={filterCtrlStyle} />
-            </FilterField>
+              <FilterField label="Tanggal" width={isMobile ? 'calc(50% - 0.3rem)' : '145px'}>
+                <input type="date" value={searchDate} onChange={e => { setSearchDate(e.target.value); setCurrentPage(1); }} style={filterCtrlStyle} />
+              </FilterField>
 
-            {hasFilters && (
-              <button type="button" onClick={resetFilters} style={{ height: '2.25rem', padding: '0 0.85rem', fontSize: '0.82rem', fontWeight: 600, border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.6rem', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0, width: isMobile ? '100%' : 'auto' }}><X size={14} /> Reset</button>
-            )}
+              {hasFilters && (
+                <button type="button" onClick={resetFilters} style={{ height: '2.25rem', padding: '0 0.85rem', fontSize: '0.82rem', fontWeight: 600, border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.6rem', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0, width: isMobile ? '100%' : 'auto' }}><X size={14} /> Reset</button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, justifyContent: isMobile ? 'space-between' : 'flex-end', marginTop: isMobile ? '0.5rem' : 0, paddingTop: isMobile ? '0.8rem' : 0, borderTop: isMobile ? '1px dashed rgba(26,42,87,0.1)' : 'none', width: isMobile ? '100%' : 'auto' }}>
