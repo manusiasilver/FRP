@@ -115,27 +115,27 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
           <div className="frp-card">
             <h3 className="frp-section-title" style={{ marginBottom: '20px' }}>
               <span className="material-icons-round" style={{ color: '#1f4e8c', fontSize: '18px' }}>business</span>
-              Company & Template
+              Perusahaan & Template
             </h3>
-            
+
             <div className="frp-grid-2">
-              <FloatingGroup label="Company">
+              <FloatingGroup label="Kode PT">
                 <SearchableSelect
                   name="company"
                   value={formData.company}
                   onChange={v => hChange({ target: { name: 'company', value: v } })}
                   options={[
                     { value: 'PNM', label: 'PT Pilar Niaga Makmur (PNM)' },
-                    { value: 'PKS', label: 'PT Pilkada (PKS)' },
-                    { value: 'PKP', label: 'PT Pikasa (PKP)' }
+                    { value: 'PKS', label: 'PT Pilar Karang Samudera (PKS)' },
+                    { value: 'PKP', label: 'PT Pilar Kargo Perkasa (PKP)' }
                   ]}
                   disabled={!!editingDoc}
                   className="frp-select"
                   searchable={false}
                 />
               </FloatingGroup>
-              
-              <FloatingGroup label="Internal / External">
+
+              <FloatingGroup label="Int/Ext">
                 <SearchableSelect
                   name="internal_external"
                   value={formData.internal_external}
@@ -149,8 +149,8 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
                 />
               </FloatingGroup>
             </div>
-            
-            <FloatingGroup label="Document Template" style={{ marginTop: '20px' }}>
+
+            <FloatingGroup label="Template" style={{ marginTop: '20px' }}>
               <SearchableSelect
                 name="template_name"
                 value={formData.template_name}
@@ -160,9 +160,9 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
                 searchable={false}
               />
             </FloatingGroup>
-            
-            <FloatingGroup label="Document Title" style={{ marginTop: '20px' }}>
-              <input type="text" name="judul_dokumen" value={formData.judul_dokumen} onChange={hChange} placeholder="Example: Marketing Cooperation Agreement..." required className="frp-input" />
+
+            <FloatingGroup label="Judul Dokumen" style={{ marginTop: '20px' }}>
+              <input type="text" name="judul_dokumen" value={formData.judul_dokumen} onChange={hChange} placeholder="Contoh: Perjanjian Kerja Sama Pemasaran..." required className="frp-input" />
             </FloatingGroup>
           </div>
 
@@ -172,13 +172,13 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
               <span className="material-icons-round" style={{ color: '#1f4e8c', fontSize: '18px' }}>assignment</span>
               Detail Dokumen
             </h3>
-            
+
             <div className="frp-grid-2">
               <FloatingGroup label="User">
                 <input value={userName || ''} readOnly className="frp-input-readonly" />
               </FloatingGroup>
-              
-              <FloatingGroup label="Division">
+
+              <FloatingGroup label="Divisi">
                 <SearchableSelect
                   name="division"
                   value={formData.division}
@@ -191,22 +191,22 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
             </div>
 
             <div className="frp-grid-2" style={{ marginTop: '20px' }}>
-              <FloatingGroup label="Document Date">
+              <FloatingGroup label="Tanggal">
                 <DateField name="doc_date" value={formData.doc_date} onChange={hChange} required />
               </FloatingGroup>
-              
-              <FloatingGroup label="Classification">
-                <input type="text" name="klasifikasi" value={formData.klasifikasi} onChange={hChange} placeholder="Classification..." className="frp-input" />
+
+              <FloatingGroup label="Klasifikasi">
+                <input type="text" name="klasifikasi" value={formData.klasifikasi} onChange={hChange} placeholder="Klasifikasi..." className="frp-input" />
               </FloatingGroup>
             </div>
-            
+
             <div className="frp-grid-2" style={{ marginTop: '20px' }}>
-              <FloatingGroup label="Regarding">
-                <input type="text" name="regarding" value={formData.regarding} onChange={hChange} placeholder="Regarding..." className="frp-input" />
+              <FloatingGroup label="Perihal">
+                <input type="text" name="perihal" value={formData.perihal} onChange={hChange} placeholder="Perihal..." className="frp-input" />
               </FloatingGroup>
-              
-              <FloatingGroup label="Signed By">
-                <input type="text" name="signed_by" value={formData.signed_by} onChange={hChange} placeholder="Signed By..." className="frp-input" />
+
+              <FloatingGroup label="Ditandatangani Oleh">
+                <input type="text" name="signed_by" value={formData.signed_by} onChange={hChange} placeholder="Ditandatangani oleh..." className="frp-input" />
               </FloatingGroup>
             </div>
           </div>
@@ -219,12 +219,12 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
               <span className="material-icons-round" style={{ color: '#1f4e8c', fontSize: '18px' }}>link</span>
               Keterangan & Lampiran
             </h3>
-            <FloatingGroup label="Document Link">
+            <FloatingGroup label="Link Dokumen">
               <input type="text" name="link_document" value={formData.link_document} onChange={hChange} placeholder="https://..." className="frp-input" />
             </FloatingGroup>
-            
-            <FloatingGroup label="Notes" style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100px' }}>
-              <textarea name="notes" value={formData.notes} onChange={hChange} placeholder="Notes..." className="frp-textarea" style={{ height: '100%' }} />
+
+            <FloatingGroup label="Keterangan" style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100px' }}>
+              <textarea name="keterangan" value={formData.keterangan} onChange={hChange} placeholder="Keterangan..." className="frp-textarea" style={{ height: '100%' }} />
             </FloatingGroup>
           </div>
 

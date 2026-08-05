@@ -105,8 +105,8 @@ function EmptyState({ hasFilters, onReset }) {
   );
 }
 
-const thStyle = { padding: '1rem 1.15rem', textAlign: 'left', fontWeight: 700, fontSize: '0.66rem', letterSpacing: '0.09em', textTransform: 'uppercase', color: token.muted, whiteSpace: 'nowrap', background: 'linear-gradient(180deg,#f8fafc,#eef2f6)' };
-const tdStyle = { padding: '1rem 1.15rem', verticalAlign: 'top', borderBottom: `1px solid ${token.border}` };
+const thStyle = { padding: '1rem 1.15rem', textAlign: 'left', fontWeight: 700, fontSize: '0.66rem', letterSpacing: '0.09em', textTransform: 'uppercase', color: token.muted, whiteSpace: 'nowrap', background: 'linear-gradient(180deg,#f8fafc,#eef2f6)', boxSizing: 'border-box' };
+const tdStyle = { padding: '1rem 1.15rem', verticalAlign: 'top', borderBottom: `1px solid ${token.border}`, boxSizing: 'border-box' };
 
 const COLUMNS = [
   { key: 'no', label: 'No', width: 46 },
@@ -134,9 +134,9 @@ const filterSelStyle = { ...filterCtrlStyle, cursor: 'pointer', appearance: 'non
 const hFocus = e => { e.target.style.borderColor = token.blueMid; e.target.style.boxShadow = '0 0 0 3px rgba(45,74,140,0.12)'; };
 const hBlur = e => { e.target.style.borderColor = 'rgba(26,42,87,0.12)'; e.target.style.boxShadow = 'none'; };
 
-function FilterField({ label, width, children }) {
+function FilterField({ label, width, flex, children }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.28rem', width, flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.28rem', width, flex, flexShrink: flex ? 1 : 0 }}>
       <span style={{ fontSize: '0.63rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: token.muted, paddingLeft: '0.15rem' }}>{label}</span>
       {children}
     </div>
@@ -219,8 +219,11 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
 
         {/* Filter Bar */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: isMobile ? '0.6rem' : '0.85rem', marginBottom: '1rem', padding: isMobile ? '1rem' : '0.85rem 1rem', background: '#ffffff', borderRadius: '1rem', border: '1px solid rgba(26,42,87,0.08)', boxShadow: '0 4px 15px rgba(15,23,42,0.03)' }}>
-          <FilterField label="Cari" width={isMobile ? '100%' : '190px'}>
-            <input type="search" value={searchTerm} placeholder="No. dokumen, judul..." onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={filterCtrlStyle} onFocus={hFocus} onBlur={hBlur} />
+          <FilterField label="Cari" width={isMobile ? '100%' : undefined} flex={isMobile ? undefined : '1 1 260px'}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: token.muted, pointerEvents: 'none' }} />
+              <input type="search" value={searchTerm} placeholder="No. dokumen, judul..." onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ ...filterCtrlStyle, width: '100%', paddingLeft: '2.15rem' }} onFocus={hFocus} onBlur={hBlur} />
+            </div>
           </FilterField>
 
           <FilterField label="Perusahaan" width={isMobile ? 'calc(50% - 0.3rem)' : '140px'}>
@@ -271,7 +274,7 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
           </div>
         ) : (
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: 'white', borderRadius: '1rem', border: '1px solid rgba(26,42,87,0.10)' }}>
-            <table style={{ width: '100%', minWidth: `${TABLE_MIN_WIDTH}px`, borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.845rem', tableLayout: 'fixed' }}>
+            <table style={{ width: '100%', minWidth: `${TABLE_MIN_WIDTH}px`, borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.845rem', tableLayout: 'fixed', zoom: 0.8 }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
                 <tr>{COLUMNS.map(c => <th key={c.key} style={{ ...thStyle, width: c.width, borderBottom: `1px solid ${token.border}` }}>{c.label}</th>)}</tr>
               </thead>
