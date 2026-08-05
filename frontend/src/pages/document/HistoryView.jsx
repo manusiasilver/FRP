@@ -117,10 +117,8 @@ const COLUMNS = [
   { key: 'perihal', label: 'Perihal', width: 150 },
   { key: 'division', label: 'Divisi', width: 120 },
   { key: 'internal_external', label: 'Int/Ext', width: 90 },
-  { key: 'doc_date', label: 'Tanggal', width: 100 },
   { key: 'user_name', label: 'User', width: 110 },
   { key: 'signed_by', label: 'Ditandatangani', width: 130 },
-  { key: 'template_name', label: 'Template', width: 120 },
   { key: 'keterangan', label: 'Keterangan', width: 170 },
   { key: 'link_document', label: 'Link Dokumen', width: 150 },
   { key: 'created_at', label: 'Dibuat', width: 140 },
@@ -295,10 +293,8 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
                     <td style={tdStyle}><div style={{ fontSize: '0.82rem', color: token.text, ...clampStyle }}>{dash(doc.perihal)}</div></td>
                     <td style={tdStyle}><span style={{ fontSize: '0.82rem', color: token.text }}>{dash(doc.division)}</span></td>
                     <td style={tdStyle}><span style={{ fontSize: '0.78rem', color: token.muted }}>{dash(doc.internal_external)}</span></td>
-                    <td style={tdStyle}><span style={{ fontSize: '0.82rem', fontWeight: 600, color: token.text, whiteSpace: 'nowrap' }}>{formatDate(doc.doc_date)}</span></td>
                     <td style={tdStyle}><span style={{ fontSize: '0.82rem', color: token.text }}>{dash(doc.user_name)}</span></td>
                     <td style={tdStyle}><span style={{ fontSize: '0.82rem', color: token.text }}>{dash(doc.signed_by)}</span></td>
-                    <td style={tdStyle}><span style={{ fontSize: '0.78rem', color: token.muted, wordBreak: 'break-word' }}>{dash(doc.template_name)}</span></td>
                     <td style={tdStyle}><div style={{ fontSize: '0.82rem', color: token.text, ...clampStyle }}>{dash(doc.keterangan)}</div></td>
                     <td style={tdStyle}>
                       {doc.link_document
