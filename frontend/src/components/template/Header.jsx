@@ -22,7 +22,7 @@ function getTitleFromPath(pathname) {
   if (pathname.startsWith('/admin')) return 'Master Data'
   if (pathname.startsWith('/frp/')) return 'Detail FRP'
   if (pathname.startsWith('/rp-approval')) return 'Approval RP'
-  return ROUTE_TITLES[pathname] ?? 'Form Request Payment'
+  return ROUTE_TITLES[pathname] ?? 'Document Generator'
 }
 
 export default function Header({

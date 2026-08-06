@@ -202,13 +202,13 @@ function SearchableSelect({ value, onChange, options, placeholder = 'Semua' }) {
   );
 }
 
-export default function HistoryView({ filtered, pageSize, setPageSize, setCurrentPage, fetchData, tableLoading, searchTerm, setSearchTerm, searchDate, setSearchDate, searchIntExt, setSearchIntExt, searchCompany, setSearchCompany, searchDivision, setSearchDivision, companyOptions = [], divisionOptions = [], pageData, currentPage, hDownload, totalPages, masterData, templates, userName }) {
+export default function HistoryView({ filtered, pageSize, setPageSize, setCurrentPage, fetchData, tableLoading, searchTerm, setSearchTerm, searchDate, setSearchDate, searchIntExt, setSearchIntExt, searchCompany, setSearchCompany, searchDivision, setSearchDivision, searchUser, setSearchUser, companyOptions = [], divisionOptions = [], userOptions = [], pageData, currentPage, hDownload, totalPages, masterData, templates, userName }) {
   const [editDoc, setEditDoc] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const toggleRow = id => setExpandedRows(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const isMobile = useIsMobile();
-  const hasFilters = !!(searchTerm || searchDate || searchIntExt || searchCompany || searchDivision);
-  const resetFilters = () => { setSearchTerm(''); setSearchDate(''); setSearchIntExt(''); setSearchCompany(''); setSearchDivision(''); setCurrentPage(1); };
+  const hasFilters = !!(searchTerm || searchDate || searchIntExt || searchCompany || searchDivision || searchUser);
+  const resetFilters = () => { setSearchTerm(''); setSearchDate(''); setSearchIntExt(''); setSearchCompany(''); setSearchDivision(''); setSearchUser(''); setCurrentPage(1); };
 
   return (
     <div style={{ position: 'relative', height: isMobile ? 'auto' : '100%', flex: isMobile ? '0 0 auto' : '1 1 0', minHeight: 0, padding: isMobile ? '1rem' : '1.5rem', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', width: '100%', overflow: isMobile ? 'visible' : 'hidden' }}>
@@ -232,6 +232,10 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
 
           <FilterField label="Divisi" width={isMobile ? 'calc(50% - 0.3rem)' : '170px'}>
             <SearchableSelect value={searchDivision} onChange={v => { setSearchDivision(v); setCurrentPage(1); }} options={divisionOptions} />
+          </FilterField>
+
+          <FilterField label="User" width={isMobile ? 'calc(50% - 0.3rem)' : '170px'}>
+            <SearchableSelect value={searchUser} onChange={v => { setSearchUser(v); setCurrentPage(1); }} options={userOptions} />
           </FilterField>
 
           <FilterField label="Tipe" width={isMobile ? 'calc(50% - 0.3rem)' : '120px'}>

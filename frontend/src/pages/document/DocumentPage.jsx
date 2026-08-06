@@ -36,6 +36,7 @@ export default function DocumentPage({ view = 'form' }) {
   const [searchIntExt, setSearchIntExt] = useState('');
   const [searchCompany, setSearchCompany]   = useState('');
   const [searchDivision, setSearchDivision] = useState('');
+  const [searchUser, setSearchUser]         = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -138,19 +139,21 @@ export default function DocumentPage({ view = 'form' }) {
     const ie = !searchIntExt || doc.internal_external === searchIntExt;
     const c = !searchCompany || doc.company === searchCompany;
     const dv = !searchDivision || doc.division === searchDivision;
-    return s && d && ie && c && dv;
+    const u = !searchUser || doc.user_name === searchUser;
+    return s && d && ie && c && dv && u;
   });
   const totalPages = Math.ceil(filtered.length / pageSize) || 1;
   const pageData = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const companyOptions = [...new Set(asArray(documents).map(d => d.company).filter(Boolean))].sort();
   const divisionOptions = [...new Set(asArray(documents).map(d => d.division).filter(Boolean))].sort();
+  const userOptions = [...new Set(asArray(documents).map(d => d.user_name).filter(Boolean))].sort();
 
   if (view === 'templates') {
     return <TemplatesView templates={templates} uploadLoading={uploadLoading} uploadMsg={uploadMsg} showNote={showNote} setShowNote={setShowNote} hUpload={hUpload} hDeleteTemplate={hDeleteTemplate} fileInputRef={fileInputRef} setUploadMsg={setUploadMsg} />;
   }
 
   if (view === 'history') {
-    return <HistoryView filtered={filtered} pageSize={pageSize} setPageSize={setPageSize} setCurrentPage={setCurrentPage} fetchData={fetchData} tableLoading={tableLoading} searchTerm={searchTerm} setSearchTerm={setSearchTerm} searchDate={searchDate} setSearchDate={setSearchDate} searchIntExt={searchIntExt} setSearchIntExt={setSearchIntExt} searchCompany={searchCompany} setSearchCompany={setSearchCompany} searchDivision={searchDivision} setSearchDivision={setSearchDivision} companyOptions={companyOptions} divisionOptions={divisionOptions} pageData={pageData} currentPage={currentPage} hDownload={hDownload} totalPages={totalPages} masterData={masterData} templates={templates} userName={userName} />;
+    return <HistoryView filtered={filtered} pageSize={pageSize} setPageSize={setPageSize} setCurrentPage={setCurrentPage} fetchData={fetchData} tableLoading={tableLoading} searchTerm={searchTerm} setSearchTerm={setSearchTerm} searchDate={searchDate} setSearchDate={setSearchDate} searchIntExt={searchIntExt} setSearchIntExt={setSearchIntExt} searchCompany={searchCompany} setSearchCompany={setSearchCompany} searchDivision={searchDivision} setSearchDivision={setSearchDivision} searchUser={searchUser} setSearchUser={setSearchUser} companyOptions={companyOptions} divisionOptions={divisionOptions} userOptions={userOptions} pageData={pageData} currentPage={currentPage} hDownload={hDownload} totalPages={totalPages} masterData={masterData} templates={templates} userName={userName} />;
   }
 
   // default: form
