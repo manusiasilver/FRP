@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Copy, Download, RefreshCw, Save, Plus, CheckCircle2, Check } from 'lucide-react';
+import { Copy, Download, RefreshCw, Save, Plus, Hash, CheckCircle2, Check } from 'lucide-react';
 import '../../styles/frp/new-frp.css';
 import SearchableSelect from '../../components/template/SearchableSelect.jsx';
 
@@ -75,17 +75,17 @@ function ResultBanner({ doc, loading, isEditing, onDownload, onDuplicate, onSave
         </button>
       </div>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button type="button" onClick={onNew} disabled={!doc} className="frp-btn-secondary" style={{ background: '#f1f5f9', color: '#1f4e8c', borderColor: '#e2e8f0', opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Plus size={14} /> New</button>
-        <button type="button" onClick={onDuplicate} disabled={!doc} className="frp-btn-secondary" style={{ background: '#f1f5f9', color: '#1f4e8c', borderColor: '#e2e8f0', opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Copy size={14} /> Duplicate</button>
-        <button type="button" onClick={onDownload} disabled={!doc} className="frp-btn-primary" style={{ background: '#10b981', opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Download size={14} /> Download</button>
-        
+        <button type="button" onClick={onNew} disabled={!doc} className="frp-btn-secondary" style={{ opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Plus size={14} /> New</button>
+        <button type="button" onClick={onDuplicate} disabled={!doc} className="frp-btn-secondary" style={{ opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Copy size={14} /> Duplicate</button>
+        <button type="button" onClick={onDownload} disabled={!doc} className="frp-btn-primary" style={{ opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Download size={14} /> Download</button>
+
         {doc ? (
           <button type="button" onClick={onSave} disabled={loading} className="frp-btn-primary">
             {loading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />} Simpan
           </button>
         ) : (
           <button type="submit" disabled={loading} className="frp-btn-primary" style={{ marginLeft: 'auto', padding: '0.5rem 1.5rem' }}>
-            {loading ? <><RefreshCw size={17} style={{ animation: 'spin 1s linear infinite' }} /> Memproses...</> : isEditing ? <><Save size={17} /> Simpan Perubahan</> : <><Plus size={17} /> Generate Number</>}
+            {loading ? <><RefreshCw size={17} style={{ animation: 'spin 1s linear infinite' }} /> Memproses...</> : isEditing ? <><Save size={17} /> Simpan Perubahan</> : <><Hash size={17} /> Generate Number</>}
           </button>
         )}
       </div>

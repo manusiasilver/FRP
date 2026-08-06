@@ -1,1 +1,0 @@
-import dialog from '@dialog/Dialog.module.scss';

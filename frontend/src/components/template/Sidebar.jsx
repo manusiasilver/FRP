@@ -307,7 +307,7 @@ function Sidebar({
       : []
 
   const uniqueCompanies = [...new Set((resolvedAssignments || []).map(a => a.name))]
-  const showChangeAccess = canChangeAccess || (resolvedAssignments || []).length > 1
+  const showChangeAccess = Boolean(canChangeAccess && (changeAccessHref || onChangeAccess))
   const backUrl = changeAccessHref || (uniqueCompanies.length > 1 ? '/select-company' : '/select-division')
   const normalizedRole = normalizeText(resolvedUserRole)
   const normalizedJobLevel = normalizeText(resolvedUserJobLevel)
