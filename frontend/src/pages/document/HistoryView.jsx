@@ -211,7 +211,7 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
   const resetFilters = () => { setSearchTerm(''); setSearchDate(''); setSearchIntExt(''); setSearchCompany(''); setSearchDivision(''); setCurrentPage(1); };
 
   return (
-    <div style={{ position: 'relative', height: isMobile ? 'auto' : '100%', padding: isMobile ? '1rem' : '1.5rem', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', width: '100%' }}>
+    <div style={{ position: 'relative', height: isMobile ? 'auto' : '100%', flex: isMobile ? '0 0 auto' : '1 1 0', minHeight: 0, padding: isMobile ? '1rem' : '1.5rem', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', width: '100%', overflow: isMobile ? 'visible' : 'hidden' }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       {editDoc && <EditModal doc={editDoc} templates={templates} masterData={masterData} userName={userName} onClose={() => setEditDoc(null)} onSaved={() => { fetchData(); setEditDoc(null); }} />}
 

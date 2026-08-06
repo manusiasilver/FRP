@@ -60,7 +60,7 @@ function AuthBootstrap({ children }) {
       }
     }
 
-    boot()
+    boot
 
     return () => {
       cancelled = true
