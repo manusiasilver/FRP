@@ -18,7 +18,7 @@ export default function HorizontalBarChartPreview() {
         yAxis={[{ scaleType: 'band', dataKey: 'category', width: 112 }]}
         xAxis={[{ min: 0 }]}
         series={[{ dataKey: 'value', label: 'Open Tickets', color: '#2d4a8c' }]}
-        margin={{ top: 24, right: 20, bottom: 28, left: 0 }}
+      margin={{ top: 24, right: 20, bottom: 28, left: 0 }}
       />
     </Box>
   );
