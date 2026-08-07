@@ -45,11 +45,16 @@ export async function fetchAuthUserFromSession() {
     })
 
     if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      if (response.status === 401 && data?.redirect) {
+        return { redirect: data.redirect }
+      }
+
       return null
     }
 
     const data = await response.json()
-    return data.user || null
+    return { user: data.user || null }
   } catch (_) {
     return null
   }
