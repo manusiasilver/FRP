@@ -57,7 +57,7 @@ async function devAuth(req, res, next) {
         const user = {
             ...userFromDb,
             sso: false,
-            apps: userFromDb.apps && userFromDb.apps.length ? userFromDb.apps : ['papertrail'],
+            apps: userFromDb.apps && userFromDb.apps.length ? userFromDb.apps : ['docnumber'],
             cv: userFromDb.cv ?? rows[0].token_version ?? null,
         };
 
