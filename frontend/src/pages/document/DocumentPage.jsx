@@ -9,6 +9,12 @@ import TemplatesView from './TemplatesView';
 
 const asArray = v => (Array.isArray(v) ? v : []);
 
+// Cari template yang namanya cocok dengan kode PT (mis. company "PNM" -> "PNM.docx")
+const matchTemplate = (templates, company) => {
+  const match = templates.find(t => t.toLowerCase() === `${company}.docx`.toLowerCase());
+  return match || templates[0] || '';
+};
+
 // view: 'form' | 'history' | 'templates'
 export default function DocumentPage({ view = 'form' }) {
   const { user, setUser } = useUser();
@@ -44,7 +50,7 @@ export default function DocumentPage({ view = 'form' }) {
   useEffect(() => { fetchDepartments(formData.company); }, [formData.company]);
   useEffect(() => {
     if (!templates.length) return;
-    setFormData(prev => (prev.template_name ? prev : { ...prev, template_name: templates[0] }));
+    setFormData(prev => (prev.template_name ? prev : { ...prev, template_name: matchTemplate(templates, prev.company) }));
   }, [templates]);
 
   async function fetchData() {
@@ -70,7 +76,14 @@ export default function DocumentPage({ view = 'form' }) {
     } catch (e) { console.error(e); }
   }
 
-  const hChange = e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
+  const hChange = e => {
+    const { name, value } = e.target;
+    setFormData(p => {
+      const next = { ...p, [name]: value };
+      if (name === 'company' && templates.length) next.template_name = matchTemplate(templates, value);
+      return next;
+    });
+  };
 
   async function hSubmit(e) {
     e.preventDefault();
@@ -105,12 +118,12 @@ export default function DocumentPage({ view = 'form' }) {
 
   function resetForm() {
     setGeneratedDoc(null); setEditingDoc(null);
-    setFormData({ company: 'PNM', template_name: templates[0] || '', judul_dokumen: '', division: '', internal_external: 'Internal', doc_date: new Date().toISOString().split('T')[0], klasifikasi: '', perihal: '', signed_by: '', keterangan: '', link_document: '' });
+    setFormData({ company: 'PNM', template_name: matchTemplate(templates, 'PNM'), judul_dokumen: '', division: '', internal_external: 'Internal', doc_date: new Date().toISOString().split('T')[0], klasifikasi: '', perihal: '', signed_by: '', keterangan: '', link_document: '' });
   }
 
   function startDuplicate(doc) {
     setEditingDoc(null); setGeneratedDoc(null);
-    setFormData({ company: doc.company, template_name: doc.template_name || templates[0] || '', judul_dokumen: doc.judul_dokumen || '', division: doc.division, internal_external: doc.internal_external || 'Internal', doc_date: new Date().toISOString().split('T')[0], klasifikasi: doc.klasifikasi || '', perihal: doc.perihal || '', signed_by: doc.signed_by || '', keterangan: doc.keterangan || '', link_document: doc.link_document || '' });
+    setFormData({ company: doc.company, template_name: doc.template_name || matchTemplate(templates, doc.company), judul_dokumen: doc.judul_dokumen || '', division: doc.division, internal_external: doc.internal_external || 'Internal', doc_date: new Date().toISOString().split('T')[0], klasifikasi: doc.klasifikasi || '', perihal: doc.perihal || '', signed_by: doc.signed_by || '', keterangan: doc.keterangan || '', link_document: doc.link_document || '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 

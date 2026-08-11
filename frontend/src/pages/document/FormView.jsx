@@ -144,7 +144,7 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
               </FloatingGroup>
             </div>
 
-            <FloatingGroup label="Template" style={{ display: 'none' }}>
+            <FloatingGroup label="Template" style={{ marginTop: '20px' }}>
               <SearchableSelect
                 name="template_name"
                 value={formData.template_name}
