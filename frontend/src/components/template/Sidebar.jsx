@@ -342,7 +342,7 @@ function Sidebar({
     const rawItems = hideMenu ? [] : [
       { label: 'Generate Document', href: '/document/generate', icon: 'note_add', auth: { allow: 'all' } },
       { label: 'Riwayat Document', href: '/document/riwayat', icon: 'history', auth: { allow: 'all' } },
-      { label: 'Kelola Template', href: '/document/template', icon: 'folder_open', auth: { divisions: ['IT'] } },
+      { label: 'Kelola Template', href: '/document/template', icon: 'folder_open', auth: (context) => context.division === 'IT' },
     ]
 
     return filterMenuItems(rawItems, authContext)
