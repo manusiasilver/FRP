@@ -5,6 +5,8 @@ import { UserProvider, useUser } from './contexts/UserContext'
 import { PageLoadingProvider } from './contexts/PageLoadingContext'
 import DashboardLayout from './components/template/DashboardLayout'
 import DocumentPage from './pages/document/DocumentPage'
+import SelectCompanyPage from './pages/SelectCompanyPage'
+import SelectDivisionPage from './pages/SelectDivisionPage'
 import {
   consumeTokenFromUrl,
   fetchAuthUserFromSession,
@@ -29,9 +31,14 @@ function AuthBootstrap({ children }) {
         }
 
         if (!cancelled && !user) {
-          const sessionUser = await fetchAuthUserFromSession()
-          if (!cancelled && sessionUser) {
-            setUser(sessionUser, { replaceSelection: true })
+          const sessionAuth = await fetchAuthUserFromSession()
+          if (!cancelled && sessionAuth?.user) {
+            setUser(sessionAuth.user, { replaceSelection: true })
+          } else if (!cancelled && sessionAuth?.redirect) {
+            const redirectPath = sessionAuth.redirect
+            if (window.location.pathname !== redirectPath) {
+              window.history.replaceState({}, document.title, redirectPath)
+            }
           } else {
             const storedUser = getAuthUser()
             if (!cancelled && storedUser) {
@@ -58,7 +65,7 @@ function AuthBootstrap({ children }) {
   useEffect(() => {
     if (!ready) return
 
-    const isPublicPath = window.location.pathname === '/login'
+    const isPublicPath = ['/login', '/select-company', '/select-division'].includes(window.location.pathname)
 
     if (!isAuthenticated() && !isPublicPath) {
       redirectToPilargroupLogin()
@@ -76,6 +83,16 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/select-company" element={<SelectCompanyPage />} />
+      <Route
+        path="/select-division"
+        element={(
+          <SelectDivisionPage
+            forceFetchUserInfo
+            userInfoEndpoint="/api/data/select-division"
+          />
+        )}
+      />
       <Route element={<DashboardLayout />}>
         <Route path="/" element={<DocumentPage view="form" />} />
         <Route path="/document/generate" element={<DocumentPage view="form" />} />

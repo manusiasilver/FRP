@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24.14.0
 
       # -------------------------
       # 3. Install dependencies & build frontend
@@ -57,77 +57,101 @@ jobs:
           echo ">> Check generated public key from GitHub secret"
           ssh-keygen -y -f ~/.ssh/deploy_key
 
-          echo ">> Test SSH verbose"
-          ssh -vvv -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "whoami && hostname"
+          echo ">> Test SSH"
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} \
+            "whoami && hostname"
 
       # -------------------------
-      # 6. Pull latest code on VM
+      # 6. Pull latest Docnumber code on VM
       # -------------------------
       - name: Pull latest code on VM
         env:
           REPO_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
-            set -e
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
+              set -e
 
-            if [ ! -d /var/www/docnumber/.git ]; then
-              echo '>> /var/www/docnumber not found, cloning repo (first-time deploy)'
-              sudo mkdir -p /var/www/docnumber
-              sudo chown \$(whoami):\$(whoami) /var/www/docnumber
-              git clone '$REPO_URL' /var/www/docnumber
-            fi
+              if [ ! -d /var/www/docnumber/.git ]; then
+                echo '>> /var/www/docnumber not found, cloning repo (first-time deploy)'
+                sudo mkdir -p /var/www/docnumber
+                sudo chown \$(whoami):\$(whoami) /var/www/docnumber
+                git clone '$REPO_URL' /var/www/docnumber
+              fi
 
-            cd /var/www/docnumber
+              cd /var/www/docnumber
 
-            echo '>> Sync latest code'
-            git fetch '$REPO_URL' main
-            git reset --hard FETCH_HEAD
-            git remote set-url origin https://github.com/${{ github.repository }}.git
-            git clean -fd -e backend/.env -e backend/credentials/
-          "
+              echo '>> Sync latest Docnumber code'
+              git fetch '$REPO_URL' main
+              git reset --hard FETCH_HEAD
+              git remote set-url origin https://github.com/${{ github.repository }}.git
+
+              git clean -fd \
+                -e backend/.env \
+                -e backend/.env.local \
+                -e backend/credentials/
+            "
+
       # -------------------------
-      # 7. Upload frontend build to VM
+      # 7. Upload frontend build
       # -------------------------
       - name: Upload frontend build to VM
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
-            mkdir -p /var/www/docnumber/frontend/dist
-          "
+          ssh \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
+              mkdir -p /var/www/docnumber/frontend/dist
+            "
 
-          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             frontend/dist/ \
             ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/var/www/docnumber/frontend/dist/
 
       # -------------------------
-      # 8. Finalize backend deploy on VM
+      # 8. Finalize backend deploy
       # -------------------------
       - name: Finalize backend deploy on VM
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
-            set -e
+          ssh \
+            -i ~/.ssh/deploy_key \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
+              set -e
 
-            export NVM_DIR=\"\$HOME/.nvm\"
-            [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
-            nvm use 18.18.0
+              export NVM_DIR=\"\$HOME/.nvm\"
+              [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
 
-            echo '>> Check node'
-            node -v
-            npm -v
-            pm2 -v
+              nvm use 24.14.0
 
-            cd /var/www/docnumber/backend
+              echo '>> Check Node'
+              node -v
+              npm -v
+              pm2 -v
 
-            echo '>> Install backend dependencies'
-            npm install
+              cd /var/www/docnumber/backend
 
-            echo '>> Restart PM2 app'
-            pm2 restart docnumber-api || pm2 start npm --name docnumber-api -- run start
+              echo '>> Install backend dependencies'
+              npm install
 
-            echo '>> Save PM2 process list'
-            pm2 save
+              echo '>> Restart Docnumber PM2 app'
+              pm2 restart docnumber-api --update-env || \
+                pm2 start npm \
+                  --name docnumber-api \
+                  --cwd /var/www/docnumber/backend \
+                  -- run start
 
-            echo '>> Reload nginx'
-            sudo systemctl reload nginx
+              echo '>> Save PM2 process list'
+              pm2 save
 
-            echo '>> Deploy selesai'
-          "
+              echo '>> Reload nginx'
+              sudo nginx -t
+              sudo systemctl reload nginx
+
+              echo '>> Docnumber deploy selesai'
+            "
