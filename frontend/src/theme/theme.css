@@ -1,0 +1,12 @@
+/* =========================================
+   APP THEME / DISPLAY SCALE
+   Ubah --app-zoom untuk mengatur seberapa "zoom out"
+   tampilan aplikasi (1 = normal, lebih kecil = lebih zoom out).
+   ========================================= */
+:root {
+  --app-zoom: 0.9;
+}
+
+html {
+  zoom: var(--app-zoom);
+}

@@ -126,8 +126,8 @@ app.use(async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const allowedApps = Array.isArray(decoded.apps) ? decoded.apps : [];
-        if (!allowedApps.includes('papertrail')) {
-            return res.status(403).json({ error: 'Forbidden: papertrail access denied' });
+        if (!allowedApps.includes('docnumber')) {
+            return res.status(403).json({ error: 'Forbidden: docnumber access denied' });
         }
 
         // Kalau session sudah ada, tetap cek token_version supaya logout pusat kebaca

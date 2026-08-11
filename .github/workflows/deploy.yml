@@ -1,4 +1,4 @@
-name: Deploy papertrail.pilargroup.id
+name: Deploy docnumber.pilargroup.id
 
 on:
   push:
@@ -69,7 +69,15 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
             set -e
-            cd /var/www/papertrail
+
+            if [ ! -d /var/www/docnumber/.git ]; then
+              echo '>> /var/www/docnumber not found, cloning repo (first-time deploy)'
+              sudo mkdir -p /var/www/docnumber
+              sudo chown \$(whoami):\$(whoami) /var/www/docnumber
+              git clone '$REPO_URL' /var/www/docnumber
+            fi
+
+            cd /var/www/docnumber
 
             echo '>> Sync latest code'
             git fetch '$REPO_URL' main
@@ -83,12 +91,12 @@ jobs:
       - name: Upload frontend build to VM
         run: |
           ssh -i ~/.ssh/deploy_key ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} "
-            mkdir -p /var/www/papertrail/frontend/dist
+            mkdir -p /var/www/docnumber/frontend/dist
           "
 
           rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             frontend/dist/ \
-            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/var/www/papertrail/frontend/dist/
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/var/www/docnumber/frontend/dist/
 
       # -------------------------
       # 8. Finalize backend deploy on VM
@@ -107,13 +115,13 @@ jobs:
             npm -v
             pm2 -v
 
-            cd /var/www/papertrail/backend
+            cd /var/www/docnumber/backend
 
             echo '>> Install backend dependencies'
             npm install
 
             echo '>> Restart PM2 app'
-            pm2 restart papertrail-api || pm2 start npm --name papertrail-api -- run start
+            pm2 restart docnumber-api || pm2 start npm --name docnumber-api -- run start
 
             echo '>> Save PM2 process list'
             pm2 save

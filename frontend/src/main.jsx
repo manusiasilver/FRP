@@ -6,6 +6,7 @@ import { configureNetworkClient } from './services/network'
 import './styles/color.css'
 import './styles/templateComponents.css'
 import './styles/style.css'
+import './theme/theme.css'
 
 configureNetworkClient()
 
