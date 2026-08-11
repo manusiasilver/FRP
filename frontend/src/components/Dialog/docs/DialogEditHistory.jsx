@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import axios from 'axios'
-import { RefreshCw, Save, X } from 'lucide-react'
+import { RefreshCw, Save } from 'lucide-react'
 
 import SearchableSelect from '../../template/SearchableSelect.jsx'
-import { token, Btn, Inp, Field, Divider, useIsMobile } from '../../../pages/document/SharedUI'
+import { XClose } from '../../template/TemplateIcons.jsx'
+import { token, Inp, Field, Divider, useIsMobile } from '../../../pages/document/SharedUI'
 
 const asArray = (value) => (Array.isArray(value) ? value : [])
 
@@ -37,41 +38,6 @@ const readonlySelectStyle = {
   ...selectStyle,
   background: '#f1f5f9',
   color: token.muted,
-}
-
-function Overlay({ onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(5px)', zIndex: 9000 }}
-    />
-  )
-}
-
-function ModalBox({ children, maxWidth = '700px', isMobile }) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: isMobile ? 'max(12px,env(safe-area-inset-top,0px))' : '50%',
-        left: '50%',
-        transform: isMobile ? 'translateX(-50%)' : 'translate(-50%,-50%)',
-        zIndex: 9001,
-        background: token.surface,
-        borderRadius: '1.1rem',
-        boxShadow: '0 30px 80px rgba(15,23,42,0.25)',
-        border: `1px solid ${token.border}`,
-        maxHeight: isMobile ? 'calc(100dvh - 24px)' : '92vh',
-        display: 'flex',
-        flexDirection: 'column',
-        width: isMobile ? 'calc(100vw - 24px)' : '92vw',
-        maxWidth,
-        overflowY: 'auto',
-      }}
-    >
-      {children}
-    </div>
-  )
 }
 
 function DialogEditHistoryContent({ doc, templates, masterData, userName, onClose, onSaved }) {
@@ -153,39 +119,48 @@ function DialogEditHistoryContent({ doc, templates, masterData, userName, onClos
     .map((division) => ({ value: division, label: division }))
 
   const dialogNode = (
-    <>
-      <style>{'@keyframes dialogEditHistorySpin{to{transform:rotate(360deg)}}'}</style>
-      <Overlay onClick={onClose} />
-      <ModalBox maxWidth="800px" isMobile={isMobile}>
-        <div
-          style={{
-            padding: isMobile ? '1rem' : '1.25rem 1.75rem',
-            borderBottom: `1px solid ${token.border}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            background: token.surface,
-            zIndex: 1,
-            borderRadius: '1.1rem 1.1rem 0 0',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', color: token.muted }}>Edit Dokumen</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: token.blue }}>{doc.doc_number}</div>
+    <div className="dashboard-popup-overlay" role="presentation" onClick={onClose}>
+      <form
+        className="dashboard-popup"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-edit-history-title"
+        onSubmit={hSubmit}
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          width: isMobile ? 'min(100%, calc(100vw - 24px))' : 'min(92vw, 800px)',
+          maxHeight: isMobile ? 'calc(100dvh - 24px)' : '92vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div className="dashboard-popup__header">
+          <div style={{ minWidth: 0 }}>
+            <p className="dashboard-popup__eyebrow">Edit Dokumen</p>
+            <h2 className="dashboard-popup__title" id="dialog-edit-history-title">
+              {doc.doc_number}
+            </h2>
           </div>
+
           <button
             type="button"
+            className="dashboard-popup__close"
             onClick={onClose}
             aria-label="Tutup dialog"
-            style={{ background: 'rgba(26,42,87,0.07)', border: 'none', cursor: 'pointer', color: token.muted, padding: '0.4rem', borderRadius: '0.5rem', display: 'flex' }}
           >
-            <X size={18} />
+            <XClose size={18} />
           </button>
         </div>
 
-        <form onSubmit={hSubmit} style={{ padding: isMobile ? '1rem' : '1rem 1.75rem 1.5rem' }}>
+        <div
+          className="dashboard-popup__body"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            padding: isMobile ? '1rem' : '1.25rem',
+          }}
+        >
           <Divider label="Perusahaan" />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '1rem' }}>
             <Field label="Template">
@@ -275,18 +250,28 @@ function DialogEditHistoryContent({ doc, templates, masterData, userName, onClos
               />
             </Field>
           </div>
+        </div>
 
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: `1px solid ${token.border}`, display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <Btn variant="ghost" type="button" onClick={onClose}>Batal</Btn>
-            <Btn variant="primary" type="submit" disabled={saving}>
-              {saving
-                ? <><RefreshCw size={13} style={{ animation: 'dialogEditHistorySpin 1s linear infinite' }} /> Menyimpan...</>
-                : <><Save size={13} /> Simpan Perubahan</>}
-            </Btn>
-          </div>
-        </form>
-      </ModalBox>
-    </>
+        <div className="dashboard-popup__actions" style={{ flexWrap: 'wrap', paddingTop: '1rem', borderTop: `1px solid ${token.border}` }}>
+          <button
+            type="button"
+            className="dashboard-popup__button dashboard-popup__button--secondary"
+            onClick={onClose}
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="dashboard-popup__button dashboard-popup__button--primary"
+            disabled={saving}
+          >
+            {saving
+              ? <><RefreshCw className="dashboard-popup__spinner" size={13} /> Menyimpan...</>
+              : <><Save size={13} /> Simpan Perubahan</>}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 
   return createPortal(dialogNode, document.body)
