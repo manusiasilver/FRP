@@ -210,7 +210,7 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
           </div>
         ) : (
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: 'white', borderRadius: '1rem', border: '1px solid rgba(26,42,87,0.10)' }}>
-            <table style={{ width: '100%', minWidth: `${TABLE_MIN_WIDTH}px`, borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.845rem', tableLayout: 'fixed', zoom: 0.8 }}>
+            <table style={{ width: '100%', minWidth: `${TABLE_MIN_WIDTH}px`, borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.845rem', tableLayout: 'fixed' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
                 <tr>{COLUMNS.map(c => <th key={c.key} style={{ ...thStyle, width: c.width, borderBottom: `1px solid ${token.border}` }}>{c.label}</th>)}</tr>
               </thead>

@@ -4,7 +4,7 @@
    tampilan aplikasi (1 = normal, lebih kecil = lebih zoom out).
    ========================================= */
 :root {
-  --app-zoom: 0.9;
+  --app-zoom: 0.8;
 }
 
 html {
