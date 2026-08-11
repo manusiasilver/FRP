@@ -12,9 +12,10 @@ function FloatingGroup({ label, children, style, className }) {
   )
 }
 
-function DateField({ name, value, onChange, required }) {
+function DateField({ name, value, onChange, required, disabled }) {
   const inputRef = useRef(null)
   const openPicker = () => {
+    if (disabled) return
     if (!inputRef.current) return
     if (typeof inputRef.current.showPicker === 'function') {
       inputRef.current.showPicker()
@@ -33,11 +34,12 @@ function DateField({ name, value, onChange, required }) {
         className="frp-input"
         placeholder=" "
         required={required}
-        style={{ paddingRight: '2.8rem', cursor: 'pointer', WebkitAppearance: 'none', MozAppearance: 'textfield', appearance: 'none', lineHeight: 'normal' }}
+        disabled={disabled}
+        style={{ paddingRight: '2.8rem', cursor: disabled ? 'not-allowed' : 'pointer', WebkitAppearance: 'none', MozAppearance: 'textfield', appearance: 'none', lineHeight: 'normal' }}
         value={value}
         onChange={onChange}
       />
-      <button type="button" onClick={openPicker} style={{ position: 'absolute', top: '50%', right: '6px', transform: 'translateY(-50%)', width: '26px', height: '26px', borderRadius: '8px', border: 'none', background: '#e2e8f0', color: '#475569', display: 'grid', placeItems: 'center', cursor: 'pointer', padding: 0, pointerEvents: 'none' }}>
+      <button type="button" onClick={openPicker} disabled={disabled} style={{ position: 'absolute', top: '50%', right: '6px', transform: 'translateY(-50%)', width: '26px', height: '26px', borderRadius: '8px', border: 'none', background: '#e2e8f0', color: '#475569', display: 'grid', placeItems: 'center', cursor: disabled ? 'not-allowed' : 'pointer', padding: 0, pointerEvents: 'none' }}>
         <span className="material-icons-round" style={{ fontSize: '16px' }}>calendar_month</span>
       </button>
       <style>{`
@@ -93,6 +95,7 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
   const [viewportWidth, setViewportWidth] = useState(() => (typeof window === 'undefined' ? 1280 : window.innerWidth))
   useEffect(() => { const handleResize = () => setViewportWidth(window.innerWidth); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize) }, [])
   const isMobile = viewportWidth < 768
+  const locked = !!generatedDoc
 
   return (
     <main className="dashboard-main" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: isMobile ? '12px' : '16px' }}>
@@ -123,7 +126,7 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
                     { value: 'PKS', label: 'PT Pilar Karang Samudera (PKS)' },
                     { value: 'PKP', label: 'PT Pilar Kargo Perkasa (PKP)' }
                   ]}
-                  disabled={!!editingDoc}
+                  disabled={locked || !!editingDoc}
                   className="frp-select"
                   searchable={false}
                 />
@@ -138,6 +141,7 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
                     { value: 'Internal', label: 'Internal' },
                     { value: 'External', label: 'External' }
                   ]}
+                  disabled={locked}
                   className="frp-select"
                   searchable={false}
                 />
@@ -150,13 +154,14 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
                 value={formData.template_name}
                 onChange={v => hChange({ target: { name: 'template_name', value: v } })}
                 options={templates.length === 0 ? [{ value: '', label: '— Belum ada template —' }] : templates.map(t => ({ value: t, label: t }))}
+                disabled={locked}
                 className="frp-select"
                 searchable={false}
               />
             </FloatingGroup>
 
             <FloatingGroup label="Judul Dokumen" style={{ marginTop: '20px' }}>
-              <input type="text" name="judul_dokumen" value={formData.judul_dokumen} onChange={hChange} placeholder="Contoh: Perjanjian Kerja Sama Pemasaran..." required className="frp-input" />
+              <input type="text" name="judul_dokumen" value={formData.judul_dokumen} onChange={hChange} placeholder="Contoh: Perjanjian Kerja Sama Pemasaran..." required disabled={locked} className="frp-input" />
             </FloatingGroup>
           </div>
 
@@ -179,6 +184,7 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
                   onChange={v => hChange({ target: { name: 'division', value: v } })}
                   options={[...new Set(masterData.divisions.map(d => d?.name).filter(Boolean))].map(name => ({ value: name, label: name }))}
                   placeholder="— Pilih —"
+                  disabled={locked}
                   className="frp-select"
                 />
               </FloatingGroup>
@@ -186,21 +192,21 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
 
             <div className="frp-grid-2" style={{ marginTop: '20px' }}>
               <FloatingGroup label="Tanggal">
-                <DateField name="doc_date" value={formData.doc_date} onChange={hChange} required />
+                <DateField name="doc_date" value={formData.doc_date} onChange={hChange} required disabled={locked} />
               </FloatingGroup>
 
               <FloatingGroup label="Klasifikasi">
-                <input type="text" name="klasifikasi" value={formData.klasifikasi} onChange={hChange} placeholder="Klasifikasi..." className="frp-input" />
+                <input type="text" name="klasifikasi" value={formData.klasifikasi} onChange={hChange} placeholder="Klasifikasi..." disabled={locked} className="frp-input" />
               </FloatingGroup>
             </div>
 
             <div className="frp-grid-2" style={{ marginTop: '20px' }}>
               <FloatingGroup label="Perihal">
-                <input type="text" name="perihal" value={formData.perihal} onChange={hChange} placeholder="Perihal..." className="frp-input" />
+                <input type="text" name="perihal" value={formData.perihal} onChange={hChange} placeholder="Perihal..." disabled={locked} className="frp-input" />
               </FloatingGroup>
 
               <FloatingGroup label="Ditandatangani Oleh">
-                <input type="text" name="signed_by" value={formData.signed_by} onChange={hChange} placeholder="Ditandatangani oleh..." className="frp-input" />
+                <input type="text" name="signed_by" value={formData.signed_by} onChange={hChange} placeholder="Ditandatangani oleh..." disabled={locked} className="frp-input" />
               </FloatingGroup>
             </div>
           </div>
@@ -214,11 +220,11 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
               Keterangan & Lampiran
             </h3>
             <FloatingGroup label="Link Dokumen">
-              <input type="text" name="link_document" value={formData.link_document} onChange={hChange} placeholder="https://..." className="frp-input" />
+              <input type="text" name="link_document" value={formData.link_document} onChange={hChange} placeholder="https://..." disabled={locked} className="frp-input" />
             </FloatingGroup>
 
             <FloatingGroup label="Keterangan" style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100px' }}>
-              <textarea name="keterangan" value={formData.keterangan} onChange={hChange} placeholder="Keterangan..." className="frp-textarea" style={{ height: '100%' }} />
+              <textarea name="keterangan" value={formData.keterangan} onChange={hChange} placeholder="Keterangan..." disabled={locked} className="frp-textarea" style={{ height: '100%' }} />
             </FloatingGroup>
           </div>
 
