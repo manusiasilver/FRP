@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Copy, Download, RefreshCw, Save, Plus, Hash, CheckCircle2, Check } from 'lucide-react';
+import { Copy, Download, RefreshCw, Plus, Hash, CheckCircle2, Check } from 'lucide-react';
 import '../../styles/frp/new-frp.css';
 import SearchableSelect from '../../components/template/SearchableSelect.jsx';
 
@@ -48,7 +48,7 @@ function DateField({ name, value, onChange, required }) {
   )
 }
 
-function ResultBanner({ doc, loading, isEditing, onDownload, onDuplicate, onSave, onNew }) {
+function ResultBanner({ doc, loading, onDownload, onDuplicate, onNew }) {
   const [copied, setCopied] = useState(false);
   const currentYear = new Date().getFullYear();
 
@@ -61,7 +61,7 @@ function ResultBanner({ doc, loading, isEditing, onDownload, onDuplicate, onSave
   };
 
   return (
-    <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', position: 'sticky', top: '0', zIndex: 50, overflow: 'hidden', marginBottom: '20px', flexShrink: 0, boxShadow: '0 10px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+    <div style={{ background: '#fff', borderRadius: '12px', padding: '16px', overflow: 'hidden', marginBottom: '20px', flexShrink: 0, boxShadow: '0 10px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
         <CheckCircle2 size={16} color={doc ? "#10b981" : "#94a3b8"} />
         <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#475569' }}>Document Number</span>
@@ -79,13 +79,9 @@ function ResultBanner({ doc, loading, isEditing, onDownload, onDuplicate, onSave
         <button type="button" onClick={onDuplicate} disabled={!doc} className="frp-btn-secondary" style={{ opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Copy size={14} /> Duplicate</button>
         <button type="button" onClick={onDownload} disabled={!doc} className="frp-btn-primary" style={{ opacity: doc ? 1 : 0.5, cursor: doc ? 'pointer' : 'not-allowed' }}><Download size={14} /> Download</button>
 
-        {doc ? (
-          <button type="button" onClick={onSave} disabled={loading} className="frp-btn-primary">
-            {loading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />} Simpan
-          </button>
-        ) : (
+        {!doc && (
           <button type="submit" disabled={loading} className="frp-btn-primary" style={{ marginLeft: 'auto', padding: '0.5rem 1.5rem' }}>
-            {loading ? <><RefreshCw size={17} style={{ animation: 'spin 1s linear infinite' }} /> Memproses...</> : isEditing ? <><Save size={17} /> Simpan Perubahan</> : <><Hash size={17} /> Generate Number</>}
+            {loading ? <><RefreshCw size={17} style={{ animation: 'spin 1s linear infinite' }} /> Memproses...</> : <><Hash size={17} /> Generate Number</>}
           </button>
         )}
       </div>
@@ -104,10 +100,8 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
         <ResultBanner 
           doc={generatedDoc} 
           loading={loading}
-          isEditing={!!editingDoc}
           onDownload={() => hDownload(generatedDoc)} 
           onDuplicate={() => startDuplicate(generatedDoc)} 
-          onSave={hSubmit} 
           onNew={resetForm}
         />
         <div className="frp-top-panel">
@@ -150,7 +144,7 @@ export default function FormView({ editingDoc, generatedDoc, formData, templates
               </FloatingGroup>
             </div>
 
-            <FloatingGroup label="Template" style={{ marginTop: '20px' }}>
+            <FloatingGroup label="Template" style={{ display: 'none' }}>
               <SearchableSelect
                 name="template_name"
                 value={formData.template_name}

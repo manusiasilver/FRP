@@ -42,6 +42,10 @@ export default function DocumentPage({ view = 'form' }) {
 
   useEffect(() => { fetchData(); fetchDepartments('PNM'); }, []);
   useEffect(() => { fetchDepartments(formData.company); }, [formData.company]);
+  useEffect(() => {
+    if (!templates.length) return;
+    setFormData(prev => (prev.template_name ? prev : { ...prev, template_name: templates[0] }));
+  }, [templates]);
 
   async function fetchData() {
     setTableLoading(true);
@@ -70,18 +74,13 @@ export default function DocumentPage({ view = 'form' }) {
 
   async function hSubmit(e) {
     e.preventDefault();
+    if (generatedDoc) return;
     if (!formData.judul_dokumen.trim() || !formData.doc_date) { alert('Harap isi Judul Dokumen dan Tanggal!'); return; }
     setLoading(true);
     try {
-      if (editingDoc) {
-        const r = await axios.put(`/api/document/documents/${editingDoc.id}`, formData);
-        alert('Dokumen diperbarui!');
-        setGeneratedDoc(r.data);
-      } else {
-        const r = await axios.post('/api/document/generate', formData);
-        setGeneratedDoc(r.data);
-        setEditingDoc(r.data);
-      }
+      const r = await axios.post('/api/document/generate', formData);
+      setGeneratedDoc(r.data);
+      setEditingDoc(r.data);
       fetchData();
     } catch (e) { alert(e.response?.data?.error || 'Gagal memproses dokumen.'); }
     finally { setLoading(false); }
