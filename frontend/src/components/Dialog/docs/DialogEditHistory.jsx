@@ -3,7 +3,41 @@ import { createPortal } from 'react-dom'
 import axios from 'axios'
 import { RefreshCw, Save, X } from 'lucide-react'
 
-import { token, Btn, Inp, Field, Sel, Divider, useIsMobile } from '../../../pages/document/SharedUI'
+import SearchableSelect from '../../template/SearchableSelect.jsx'
+import { token, Btn, Inp, Field, Divider, useIsMobile } from '../../../pages/document/SharedUI'
+
+const asArray = (value) => (Array.isArray(value) ? value : [])
+
+function toDateInputValue(value) {
+  if (!value) return ''
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  try {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toISOString().slice(0, 10)
+  } catch {
+    return ''
+  }
+}
+
+const selectStyle = {
+  width: '100%',
+  padding: '0.6rem 0.8rem',
+  fontSize: '0.88rem',
+  color: token.text,
+  background: token.surface,
+  border: `1px solid ${token.border}`,
+  borderRadius: '0.5rem',
+  outline: 'none',
+  fontFamily: 'inherit',
+  boxSizing: 'border-box',
+}
+
+const readonlySelectStyle = {
+  ...selectStyle,
+  background: '#f1f5f9',
+  color: token.muted,
+}
 
 function Overlay({ onClick }) {
   return (
@@ -42,19 +76,21 @@ function ModalBox({ children, maxWidth = '700px', isMobile }) {
 
 function DialogEditHistoryContent({ doc, templates, masterData, userName, onClose, onSaved }) {
   const isMobile = useIsMobile()
+  const initialDivisions = asArray(masterData?.divisions)
   const [form, setForm] = useState({
     company: doc.company,
     template_name: doc.template_name || templates[0] || '',
     judul_dokumen: doc.judul_dokumen || '',
     division: doc.division || '',
     internal_external: doc.internal_external || 'Internal',
-    doc_date: doc.doc_date || '',
+    doc_date: toDateInputValue(doc.doc_date),
     klasifikasi: doc.klasifikasi || '',
     perihal: doc.perihal || '',
     signed_by: doc.signed_by || '',
     keterangan: doc.keterangan || '',
     link_document: doc.link_document || '',
   })
+  const [divisions, setDivisions] = useState(initialDivisions)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -71,7 +107,27 @@ function DialogEditHistoryContent({ doc, templates, masterData, userName, onClos
     }
   }, [onClose])
 
+  useEffect(() => {
+    let alive = true
+
+    async function loadDivisions() {
+      try {
+        const response = await axios.get('/api/document/master-departments', { params: { company: doc.company } })
+        if (alive) setDivisions(asArray(response.data?.departments))
+      } catch {
+        if (alive) setDivisions(initialDivisions)
+      }
+    }
+
+    loadDivisions()
+
+    return () => {
+      alive = false
+    }
+  }, [doc.company])
+
   const hChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
+  const setField = (name, value) => setForm((p) => ({ ...p, [name]: value }))
 
   const hSubmit = async (e) => {
     e.preventDefault()
@@ -83,13 +139,18 @@ function DialogEditHistoryContent({ doc, templates, masterData, userName, onClos
     try {
       await axios.put(`/api/document/documents/${doc.id}`, form)
       onSaved?.()
-      onClose?.()
-    } catch {
-      alert('Gagal menyimpan.')
+    } catch (error) {
+      alert(error.response?.data?.error || 'Gagal menyimpan.')
     } finally {
       setSaving(false)
     }
   }
+
+  const templateOptions = templates.length === 0
+    ? [{ value: '', label: 'Belum ada template' }]
+    : templates.map((template) => ({ value: template, label: template }))
+  const divisionOptions = [...new Set(divisions.map((division) => division?.name).filter(Boolean))]
+    .map((division) => ({ value: division, label: division }))
 
   const dialogNode = (
     <>
@@ -128,17 +189,47 @@ function DialogEditHistoryContent({ doc, templates, masterData, userName, onClos
           <Divider label="Perusahaan" />
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '1rem' }}>
             <Field label="Template">
-              <Sel name="template_name" value={form.template_name} onChange={hChange}>
-                {templates.map((t) => <option key={t} value={t}>{t}</option>)}
-              </Sel>
+              <SearchableSelect
+                name="template_name"
+                value={form.template_name}
+                onChange={(value) => setField('template_name', value)}
+                options={templateOptions}
+                placeholder="Pilih template"
+                searchable={false}
+                disabled={saving}
+                style={selectStyle}
+              />
             </Field>
             <Field label="Int/Ext">
-              <Sel name="internal_external" value={form.internal_external} onChange={hChange}>
-                <option value="Internal">Internal</option>
-                <option value="External">External</option>
-              </Sel>
+              <SearchableSelect
+                name="internal_external"
+                value={form.internal_external}
+                onChange={(value) => setField('internal_external', value)}
+                options={[
+                  { value: 'Internal', label: 'Internal' },
+                  { value: 'External', label: 'External' },
+                ]}
+                placeholder="Pilih tipe"
+                searchable={false}
+                disabled={saving}
+                style={selectStyle}
+              />
             </Field>
-            <Field label="Kode PT"><Inp value={form.company} readOnly /></Field>
+            <Field label="Kode PT">
+              <SearchableSelect
+                name="company"
+                value={form.company}
+                onChange={() => {}}
+                options={[
+                  { value: 'PNM', label: 'PT Pilar Niaga Makmur (PNM)' },
+                  { value: 'PKS', label: 'PT Pilar Karang Samudera (PKS)' },
+                  { value: 'PKP', label: 'PT Pilar Kargo Perkasa (PKP)' },
+                ]}
+                searchable={false}
+                disabled
+                style={readonlySelectStyle}
+              />
+            </Field>
           </div>
 
           <div style={{ marginTop: '1rem' }}>
@@ -151,10 +242,15 @@ function DialogEditHistoryContent({ doc, templates, masterData, userName, onClos
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '1rem' }}>
             <Field label="User"><Inp value={userName || ''} readOnly /></Field>
             <Field label="Divisi *">
-              <Sel name="division" value={form.division} onChange={hChange} required>
-                <option value="">-- Pilih --</option>
-                {masterData.divisions.map((d, i) => <option key={i} value={d.name}>{d.name}</option>)}
-              </Sel>
+              <SearchableSelect
+                name="division"
+                value={form.division}
+                onChange={(value) => setField('division', value)}
+                options={divisionOptions}
+                placeholder="Pilih divisi"
+                disabled={saving}
+                style={selectStyle}
+              />
             </Field>
             <Field label="Tanggal *"><Inp type="date" name="doc_date" value={form.doc_date} onChange={hChange} required /></Field>
             <Field label="Klasifikasi"><Inp type="text" name="klasifikasi" value={form.klasifikasi} onChange={hChange} /></Field>

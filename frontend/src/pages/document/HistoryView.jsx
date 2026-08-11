@@ -38,28 +38,28 @@ function EmptyState({ hasFilters, onReset }) {
   );
 }
 
-const thStyle = { padding: '1rem 1.15rem', textAlign: 'left', fontWeight: 700, fontSize: '0.66rem', letterSpacing: '0.09em', textTransform: 'uppercase', color: token.muted, whiteSpace: 'nowrap', background: 'linear-gradient(180deg,#f8fafc,#eef2f6)', boxSizing: 'border-box' };
+const thStyle = { padding: '1rem 1.15rem', textAlign: 'left', fontWeight: 800, fontSize: '0.68rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: token.muted, whiteSpace: 'nowrap', background: 'linear-gradient(180deg,#f8fafc,#eef2f6)', borderBottom: `2px solid ${token.blueLight}`, boxSizing: 'border-box' };
 const tdStyle = { padding: '1rem 1.15rem', verticalAlign: 'top', borderBottom: `1px solid ${token.border}`, boxSizing: 'border-box' };
 
 const COLUMNS = [
-  { key: 'no', label: 'No', width: 46 },
-  { key: 'company', label: 'Kode PT', width: 76 },
-  { key: 'doc_number', label: 'No. Dokumen', width: 170 },
-  { key: 'judul_dokumen', label: 'Judul Dokumen', width: 190 },
-  { key: 'klasifikasi', label: 'Klasifikasi', width: 130 },
-  { key: 'perihal', label: 'Perihal', width: 150 },
-  { key: 'division', label: 'Divisi', width: 120 },
-  { key: 'internal_external', label: 'Int/Ext', width: 90 },
-  { key: 'user_name', label: 'User', width: 110 },
-  { key: 'signed_by', label: 'Ditandatangani', width: 130 },
-  { key: 'keterangan', label: 'Keterangan', width: 170 },
-  { key: 'link_document', label: 'Link Dokumen', width: 150 },
-  { key: 'created_at', label: 'Dibuat', width: 140 },
-  { key: 'updated_at', label: 'Diperbarui', width: 140 },
-  { key: 'aksi', label: 'Aksi', width: 90 },
+  { key: 'no', label: 'No', width: 48 },
+  { key: 'company', label: 'Kode PT', width: 82 },
+  { key: 'doc_number', label: 'No. Dokumen', width: 185 },
+  { key: 'judul_dokumen', label: 'Judul Dokumen', width: 210 },
+  { key: 'klasifikasi', label: 'Klasifikasi', width: 145 },
+  { key: 'perihal', label: 'Perihal', width: 165 },
+  { key: 'division', label: 'Divisi', width: 130 },
+  { key: 'internal_external', label: 'Int/Ext', width: 92 },
+  { key: 'user_name', label: 'User', width: 120 },
+  { key: 'signed_by', label: 'Ditandatangani', width: 145 },
+  { key: 'keterangan', label: 'Keterangan', width: 185 },
+  { key: 'link_document', label: 'Link Dokumen', width: 165 },
+  { key: 'created_at', label: 'Dibuat', width: 145 },
+  { key: 'updated_at', label: 'Diperbarui', width: 145 },
+  { key: 'aksi', label: 'Aksi', width: 96 },
 ];
 const TABLE_MIN_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
-const clampStyle = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
+const clampStyle = { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' };
 
 const filterCtrlStyle = { width: '100%', height: '2.25rem', padding: '0 0.85rem', fontSize: '0.82rem', border: '1px solid rgba(26,42,87,0.12)', borderRadius: '0.6rem', outline: 'none', fontFamily: 'inherit', color: token.text, background: '#f8fafc', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' };
 const filterSelStyle = { ...filterCtrlStyle, cursor: 'pointer', appearance: 'none', padding: '0 1.9rem 0 0.85rem', backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.6rem center', backgroundSize: '1em' };
@@ -191,17 +191,17 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
             {pageData.length === 0 ? <EmptyState hasFilters={hasFilters} onReset={resetFilters} /> : (
               <div style={{ display: 'grid', gap: '0.9rem' }}>
                 {pageData.map((doc, idx) => (
-                  <div key={doc.id} style={{ border: '1px solid rgba(26,42,87,0.10)', borderRadius: '1rem', background: 'white', padding: '1rem' }}>
-                    <div style={{ fontSize: '0.96rem', fontWeight: 800, color: token.blue, marginBottom: '0.5rem', wordBreak: 'break-word' }}>{doc.doc_number}</div>
-                    <div style={{ fontSize: '0.85rem', color: token.text, fontWeight: 600, marginBottom: '0.5rem' }}>{dash(doc.judul_dokumen)}</div>
-                    <div style={{ fontSize: '0.78rem', color: token.muted, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+                  <div key={doc.id} style={{ border: '1px solid rgba(26,42,87,0.10)', borderRadius: '1rem', background: 'white', padding: '1.15rem' }}>
+                    <div style={{ fontSize: '1.08rem', fontWeight: 800, color: token.blue, marginBottom: '0.55rem', lineHeight: 1.35, wordBreak: 'break-word' }}>{doc.doc_number}</div>
+                    <div style={{ fontSize: '0.94rem', color: token.text, fontWeight: 700, marginBottom: '0.6rem', lineHeight: 1.45 }}>{dash(doc.judul_dokumen)}</div>
+                    <div style={{ fontSize: '0.84rem', color: token.muted, marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', lineHeight: 1.45 }}>
                       <span>{formatDate(doc.doc_date)}</span>
                       {formatTime(doc.created_at) && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.15rem' }}><Clock size={10} />{formatTime(doc.created_at)}</span>}
                       <span>· {dash(doc.division)} · {dash(doc.internal_external)}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <Btn variant="ghost" style={{ padding: '0.5rem 0.75rem', fontSize: '0.75rem' }} onClick={() => setEditDoc(doc)}><Edit size={12} /> Edit</Btn>
-                      <Btn variant="success" style={{ padding: '0.5rem 0.75rem', fontSize: '0.75rem' }} onClick={() => hDownload(doc)}><Download size={12} /> Download</Btn>
+                      <Btn variant="ghost" style={{ padding: '0.58rem 0.85rem', fontSize: '0.82rem' }} onClick={() => setEditDoc(doc)}><Edit size={13} /> Edit</Btn>
+                      <Btn variant="success" style={{ padding: '0.58rem 0.85rem', fontSize: '0.82rem' }} onClick={() => hDownload(doc)}><Download size={13} /> Download</Btn>
                     </div>
                   </div>
                 ))}
@@ -210,52 +210,52 @@ export default function HistoryView({ filtered, pageSize, setPageSize, setCurren
           </div>
         ) : (
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: 'white', borderRadius: '1rem', border: '1px solid rgba(26,42,87,0.10)' }}>
-            <table style={{ width: '100%', minWidth: `${TABLE_MIN_WIDTH}px`, borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.845rem', tableLayout: 'fixed' }}>
+            <table style={{ width: '100%', minWidth: `${TABLE_MIN_WIDTH}px`, borderCollapse: 'separate', borderSpacing: 0, fontSize: '0.9rem', tableLayout: 'fixed' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-                <tr>{COLUMNS.map(c => <th key={c.key} style={{ ...thStyle, width: c.width, borderBottom: `1px solid ${token.border}` }}>{c.label}</th>)}</tr>
+                <tr>{COLUMNS.map(c => <th key={c.key} style={{ ...thStyle, width: c.width }}>{c.label}</th>)}</tr>
               </thead>
               <tbody>
                 {pageData.length === 0 ? (
                   <tr><td colSpan={COLUMNS.length}><EmptyState hasFilters={hasFilters} onReset={resetFilters} /></td></tr>
                 ) : pageData.map((doc, idx) => (
-                  <tr key={doc.id} style={{ transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(26,42,87,0.03)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}><span style={{ fontSize: '0.72rem', color: token.muted, fontWeight: 700 }}>{(currentPage - 1) * pageSize + idx + 1}</span></td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}><span style={{ ...(badgeStyles[doc.company] || {}), padding: '0.24rem 0.58rem', borderRadius: '999px', fontSize: '0.66rem', fontWeight: 700, display: 'inline-block' }}>{doc.company}</span></td>
+                  <tr key={doc.id} style={{ transition: 'background 0.15s', background: idx % 2 === 1 ? 'rgba(26,42,87,0.015)' : 'transparent' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(26,42,87,0.045)'} onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 1 ? 'rgba(26,42,87,0.015)' : 'transparent'}>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}><span style={{ fontSize: '0.8rem', color: token.muted, fontWeight: 800 }}>{(currentPage - 1) * pageSize + idx + 1}</span></td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}><span style={{ ...(badgeStyles[doc.company] || {}), padding: '0.3rem 0.68rem', borderRadius: '999px', fontSize: '0.74rem', fontWeight: 800, display: 'inline-block' }}>{doc.company}</span></td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: token.text, wordBreak: 'break-word', flex: 1 }}>{doc.doc_number}</span>
-                        <button onClick={() => { navigator.clipboard.writeText(doc.doc_number); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: token.muted, padding: '0.1rem', display: 'flex', flexShrink: 0 }} title="Salin"><Copy size={12} /></button>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: token.text, lineHeight: 1.4, wordBreak: 'break-word', flex: 1 }}>{doc.doc_number}</span>
+                        <button onClick={() => { navigator.clipboard.writeText(doc.doc_number); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: token.muted, padding: '0.15rem', display: 'flex', flexShrink: 0 }} title="Salin"><Copy size={14} /></button>
                       </div>
                     </td>
-                    <td style={tdStyle}><div style={{ fontSize: '0.82rem', fontWeight: 600, color: token.text, ...clampStyle }}>{dash(doc.judul_dokumen)}</div></td>
-                    <td style={tdStyle}><div style={{ fontSize: '0.82rem', color: token.text, ...clampStyle }}>{dash(doc.klasifikasi)}</div></td>
-                    <td style={tdStyle}><div style={{ fontSize: '0.82rem', color: token.text, ...clampStyle }}>{dash(doc.perihal)}</div></td>
-                    <td style={tdStyle}><span style={{ fontSize: '0.82rem', color: token.text }}>{dash(doc.division)}</span></td>
-                    <td style={tdStyle}><span style={{ fontSize: '0.78rem', color: token.muted }}>{dash(doc.internal_external)}</span></td>
-                    <td style={tdStyle}><span style={{ fontSize: '0.82rem', color: token.text }}>{dash(doc.user_name)}</span></td>
-                    <td style={tdStyle}><span style={{ fontSize: '0.82rem', color: token.text }}>{dash(doc.signed_by)}</span></td>
-                    <td style={tdStyle}><div style={{ fontSize: '0.82rem', color: token.text, ...clampStyle }}>{dash(doc.keterangan)}</div></td>
+                    <td style={tdStyle}><div style={{ fontSize: '0.92rem', fontWeight: 700, color: token.text, lineHeight: 1.45, ...clampStyle }}>{dash(doc.judul_dokumen)}</div></td>
+                    <td style={tdStyle}><div style={{ fontSize: '0.9rem', color: token.text, lineHeight: 1.45, ...clampStyle }}>{dash(doc.klasifikasi)}</div></td>
+                    <td style={tdStyle}><div style={{ fontSize: '0.9rem', color: token.text, lineHeight: 1.45, ...clampStyle }}>{dash(doc.perihal)}</div></td>
+                    <td style={tdStyle}><span style={{ fontSize: '0.9rem', color: token.text, lineHeight: 1.45 }}>{dash(doc.division)}</span></td>
+                    <td style={tdStyle}><span style={{ fontSize: '0.86rem', color: token.muted, lineHeight: 1.45 }}>{dash(doc.internal_external)}</span></td>
+                    <td style={tdStyle}><span style={{ fontSize: '0.9rem', color: token.text, lineHeight: 1.45 }}>{dash(doc.user_name)}</span></td>
+                    <td style={tdStyle}><span style={{ fontSize: '0.9rem', color: token.text, lineHeight: 1.45 }}>{dash(doc.signed_by)}</span></td>
+                    <td style={tdStyle}><div style={{ fontSize: '0.9rem', color: token.text, lineHeight: 1.45, ...clampStyle }}>{dash(doc.keterangan)}</div></td>
                     <td style={tdStyle}>
                       {doc.link_document
-                        ? <a href={doc.link_document} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem', color: token.blueMid, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', wordBreak: 'break-all' }}><Link size={11} style={{ flexShrink: 0 }} /><span style={clampStyle}>{doc.link_document}</span></a>
-                        : <span style={{ fontSize: '0.82rem', color: token.muted }}>-</span>}
+                        ? <a href={doc.link_document} target="_blank" rel="noreferrer" style={{ fontSize: '0.86rem', color: token.blueMid, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', lineHeight: 1.45, wordBreak: 'break-all' }}><Link size={13} style={{ flexShrink: 0 }} /><span style={clampStyle}>{doc.link_document}</span></a>
+                        : <span style={{ fontSize: '0.9rem', color: token.muted }}>-</span>}
                     </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                        <span style={{ fontSize: '0.8rem', color: token.text, whiteSpace: 'nowrap' }}>{formatDate(doc.created_at)}</span>
-                        {formatTime(doc.created_at) && <span style={{ fontSize: '0.7rem', color: token.muted, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}><Clock size={10} />{formatTime(doc.created_at)}</span>}
+                        <span style={{ fontSize: '0.88rem', color: token.text, whiteSpace: 'nowrap' }}>{formatDate(doc.created_at)}</span>
+                        {formatTime(doc.created_at) && <span style={{ fontSize: '0.76rem', color: token.muted, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}><Clock size={11} />{formatTime(doc.created_at)}</span>}
                       </div>
                     </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                        <span style={{ fontSize: '0.8rem', color: token.text, whiteSpace: 'nowrap' }}>{formatDate(doc.updated_at)}</span>
-                        {formatTime(doc.updated_at) && <span style={{ fontSize: '0.7rem', color: token.muted, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}><Clock size={10} />{formatTime(doc.updated_at)}</span>}
+                        <span style={{ fontSize: '0.88rem', color: token.text, whiteSpace: 'nowrap' }}>{formatDate(doc.updated_at)}</span>
+                        {formatTime(doc.updated_at) && <span style={{ fontSize: '0.76rem', color: token.muted, display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}><Clock size={11} />{formatTime(doc.updated_at)}</span>}
                       </div>
                     </td>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', gap: '0.3rem' }}>
-                        <button onClick={() => setEditDoc(doc)} title="Edit" style={{ background: 'rgba(26,42,87,0.06)', border: `1px solid ${token.border}`, borderRadius: '0.45rem', padding: '0.35rem', cursor: 'pointer', color: token.blue, display: 'flex' }}><Edit size={13} /></button>
-                        <button onClick={() => hDownload(doc)} title="Download" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '0.45rem', padding: '0.35rem', cursor: 'pointer', color: '#059669', display: 'flex' }}><Download size={13} /></button>
+                        <button onClick={() => setEditDoc(doc)} title="Edit" style={{ background: 'rgba(26,42,87,0.06)', border: `1px solid ${token.border}`, borderRadius: '0.5rem', padding: '0.45rem', cursor: 'pointer', color: token.blue, display: 'flex' }}><Edit size={15} /></button>
+                        <button onClick={() => hDownload(doc)} title="Download" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '0.5rem', padding: '0.45rem', cursor: 'pointer', color: '#059669', display: 'flex' }}><Download size={15} /></button>
                       </div>
                     </td>
                   </tr>

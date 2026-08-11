@@ -108,13 +108,15 @@ export default function App() {
   return (
     <>
       <BackgroundMain />
-      <UserProvider>
-        <AuthBootstrap>
-          <PageLoadingProvider>
-            <AppRoutes />
-          </PageLoadingProvider>
-        </AuthBootstrap>
-      </UserProvider>
+      <div className="app-zoom-shell">
+        <UserProvider>
+          <AuthBootstrap>
+            <PageLoadingProvider>
+              <AppRoutes />
+            </PageLoadingProvider>
+          </AuthBootstrap>
+        </UserProvider>
+      </div>
     </>
   )
 }

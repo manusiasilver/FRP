@@ -1,12 +1,82 @@
 /* =========================================
    APP THEME / DISPLAY SCALE
-   Ubah --app-zoom untuk mengatur seberapa "zoom out"
-   tampilan aplikasi (1 = normal, lebih kecil = lebih zoom out).
+   Ubah --app-zoom untuk mengatur skala tampilan aplikasi.
+   1 = normal, lebih kecil = lebih zoom out, lebih besar = lebih zoom in.
    ========================================= */
 :root {
-  --app-zoom: 0.8;
+  --app-zoom: 0.9;
+  --app-zoom-scale: calc(1 / var(--app-zoom));
+  --app-page-background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(238,243,249,1) 100%);
 }
 
-html {
-  zoom: var(--app-zoom);
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--app-page-background);
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.app-zoom-shell {
+  width: calc(100% * var(--app-zoom-scale));
+  min-height: calc(100vh * var(--app-zoom-scale));
+  transform: scale(var(--app-zoom));
+  transform-origin: top left;
+}
+
+.app-zoom-shell .dashboard-shell {
+  height: calc(100dvh * var(--app-zoom-scale));
+  min-height: calc(100vh * var(--app-zoom-scale));
+  max-height: calc(100dvh * var(--app-zoom-scale));
+}
+
+.app-zoom-shell .sidebar {
+  height: calc(100dvh * var(--app-zoom-scale));
+  min-height: calc(100vh * var(--app-zoom-scale));
+}
+
+@media (min-width: 1025px) and (max-height: 900px) {
+  :root {
+    --app-zoom: 0.84;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1440px) {
+  :root {
+    --app-zoom: 0.84;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1280px) {
+  :root {
+    --app-zoom: 0.8;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --app-zoom: 1;
+  }
+
+  .app-zoom-shell {
+    width: 100%;
+    min-height: 100dvh;
+    transform: none;
+  }
+
+  .app-zoom-shell .dashboard-shell {
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+  }
+
+  .app-zoom-shell .sidebar {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
 }
